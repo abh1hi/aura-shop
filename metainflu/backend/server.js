@@ -5,10 +5,10 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 const authRoutes = require('./routes/authRoutes');
-const influencerRoutes = require('./routes/influencerRoutes');
-const campaignRoutes = require('./routes/campaignRoutes');
-const paymentRoutes = require('./routes/paymentRoutes');
-const adminRoutes = require('./routes/adminRoutes');
+const productRoutes = require('./routes/productRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const cartRoutes = require('./routes/cartRoutes');
 
 const { errorHandler } = require('./middleware/errorMiddleware');
 const { protect } = require('./middleware/authMiddleware');
@@ -36,10 +36,10 @@ mongoose.connect(mongoURI, {
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/influencers', influencerRoutes);
-app.use('/api/campaigns', campaignRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/cart', cartRoutes);
 
 // Test protected route
 app.get('/api/protected', protect, (req, res) => {

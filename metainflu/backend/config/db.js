@@ -5,7 +5,7 @@
 const connectDB = async () => {
   try {
     // Attempt to connect to the MongoDB URI directly
-    const conn = await mongoose.connect('mongodb://localhost:27017/mb_influencer', {
+    const conn = await mongoose.connect('mongodb://localhost:27017/aura-shop', {
       // Use new URL parser and unified topology, recommended by MongoDB
       useNewUrlParser: true,
       useUnifiedTopology: true,
