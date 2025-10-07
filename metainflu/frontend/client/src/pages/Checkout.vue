@@ -24,7 +24,7 @@
                             <!-- More address fields -->
                         </form>
                     </section>
-                    <section>
+                    <section class="mt-8">
                         <h2>Payment Details</h2>
                         <form>
                             <div class="form-group">
@@ -59,7 +59,7 @@
 <style scoped>
 .checkout-layout {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 2fr 1fr; /* Desktop default */
     gap: 4rem;
     align-items: flex-start;
 }
@@ -95,7 +95,7 @@
     padding: 2rem;
     border-radius: 12px;
     border: 1px solid var(--light-gray);
-    position: sticky;
+    position: sticky; /* Sticky on desktop/tablet */
     top: 40px;
 }
 
@@ -132,9 +132,16 @@
 }
 
 @media (max-width: 992px) {
+    /* Tablet/Mobile Layout: Stack form and summary */
     .checkout-layout {
         grid-template-columns: 1fr;
     }
+    
+    /* Remove sticky position on mobile to prevent scroll issues */
+    .order-summary {
+        position: static;
+        order: -1; /* Place summary above the form on mobile for better flow */
+        margin-bottom: 3rem;
+    }
 }
 </style>
-

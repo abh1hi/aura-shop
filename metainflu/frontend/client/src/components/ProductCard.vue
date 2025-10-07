@@ -2,12 +2,13 @@
   <div class="product-card">
     <div class="product-image-container">
       <img :src="product.imageUrl || 'https://placehold.co/400x600/f4f4f4/ccc?text=AURA'" :alt="product.name">
+      <!-- Moved button inside product-image-container to ensure it's always visible on top -->
+      <button class="add-to-cart-btn">Quick Add</button>
     </div>
     <div class="product-info">
       <h3 class="product-name">{{ product.name }}</h3>
       <p class="product-price">${{ product.price.toFixed(2) }}</p>
     </div>
-    <button class="add-to-cart-btn">Add to Cart</button>
   </div>
 </template>
 
@@ -23,7 +24,7 @@ defineProps({
 <style scoped>
 .product-card {
   background-color: #fff;
-  border-radius: 12px;
+  border-radius: 16px; /* Increased radius for modern look */
   overflow: hidden;
   transition: box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   position: relative;
@@ -53,43 +54,56 @@ defineProps({
 }
 
 .product-info {
-  padding: 1.5rem;
-  text-align: center;
+  padding: 1.25rem 1rem;
+  text-align: left;
 }
 
 .product-name {
-  font-size: 1.1rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
   margin: 0 0 0.5rem 0;
   color: var(--text-color);
 }
 
 .product-price {
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 500;
   color: var(--c5);
 }
 
+/* Quick Add Button now positioned absolutely on the image and shows on hover/mobile interaction */
 .add-to-cart-btn {
-  position: absolute;
-  bottom: 120px;
-  left: 50%;
-  transform: translate(-50%, 10px);
-  opacity: 0;
-  background-color: var(--c5);
-  color: white;
-  border: none;
-  padding: 0.8rem 1.5rem;
-  border-radius: 50px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-  white-space: nowrap;
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background-color: var(--c5);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .product-card:hover .add-to-cart-btn {
-  transform: translate(-50%, 0);
-  opacity: 1;
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Ensure button is visible on touch devices/mobile */
+@media (max-width: 992px) {
+    .add-to-cart-btn {
+        opacity: 1;
+        transform: scale(1);
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
 }
 
 .add-to-cart-btn:hover {

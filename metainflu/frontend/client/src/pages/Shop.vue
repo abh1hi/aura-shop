@@ -1,36 +1,31 @@
 <template>
     <div>
+        <!-- Page Header -->
         <PageHeader title="Shop" />
 
         <main class="container shop-layout">
-            <aside class="sidebar">
-                <h3>Filters</h3>
-                <div class="filter-group">
-                    <h4>Category</h4>
-                    <ul>
-                        <li><label><input type="checkbox" checked> All</label></li>
-                        <li><label><input type="checkbox"> Tops</label></li>
-                        <li><label><input type="checkbox"> Bottoms</label></li>
-                        <li><label><input type="checkbox"> Outerwear</label></li>
-                        <li><label><input type="checkbox"> Accessories</label></li>
-                    </ul>
-                </div>
-                <div class="filter-group">
-                    <h4>Price</h4>
-                    <ul>
-                        <li><label><input type="checkbox"> $0 - $50</label></li>
-                        <li><label><input type="checkbox"> $50 - $100</label></li>
-                        <li><label><input type="checkbox"> $100 - $200</label></li>
-                        <li><label><input type="checkbox"> $200+</label></li>
-                    </ul>
-                </div>
-            </aside>
+            
+            <!-- Filter Toggle Button (Always visible now) -->
+            <div class="filter-toggle-btn" @click="toggleFilter">
+                <h3 class="font-semibold text-lg">{{ isFilterOpen ? 'Hide Filters' : 'Show Filters' }}</h3>
+                <span>
+                    <svg v-if="!isFilterOpen" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </span>
+            </div>
 
+            <!-- Filter Component (Floating Overlay on all sizes) -->
+            <ProductFilter 
+                :is-open="isFilterOpen" 
+                @close="closeFilter"
+            />
+
+            <!-- Main Product Content -->
             <section class="main-content">
                 <div v-if="products.length > 0" class="product-grid">
                     <ProductCard v-for="product in products" :key="product._id" :product="product" />
                 </div>
-                 <div v-else>
+                 <div v-else class="text-center p-8 text-xl text-gray-500">
                     <p>Loading products...</p>
                 </div>
             </section>
@@ -43,8 +38,18 @@ import { ref, onMounted } from 'vue';
 import productService from '../services/productService';
 import ProductCard from '../components/ProductCard.vue';
 import PageHeader from '../components/PageHeader.vue';
+import ProductFilter from '../components/ProductFilter.vue'; // New Import
 
 const products = ref([]);
+const isFilterOpen = ref(false);
+
+const toggleFilter = () => {
+    isFilterOpen.value = !isFilterOpen.value;
+};
+
+const closeFilter = () => {
+    isFilterOpen.value = false;
+};
 
 onMounted(async () => {
     try {
@@ -56,161 +61,63 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* --- Removed sidebar width variable and grid layout in shop-layout --- */
 .shop-layout {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 4rem;
+    display: block; /* No grid needed, products take full width */
     padding: 4rem 0;
 }
 
-.sidebar h3 {
-    font-size: 1.8rem;
-    margin-bottom: 2.5rem;
-    color: var(--text-color);
-}
-
-.filter-group {
-    margin-bottom: 2.5rem;
-}
-
-.filter-group h4 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    color: var(--text-color);
-    border-bottom: 2px solid var(--c7);
-    padding-bottom: 0.5rem;
-    display: inline-block;
-}
-
-.filter-group ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.filter-group li {
-    margin-bottom: 1rem;
-}
-
-.filter-group label {
+/* --- Filter Toggle Button (Desktop/Mobile/Tablet) --- */
+.filter-toggle-btn {
     display: flex;
+    justify-content: space-between;
     align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 12px;
     cursor: pointer;
-    font-size: 1rem;
-    color: #555;
+    margin-bottom: 2rem;
+    background-color: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    max-width: 300px; /* Constrain button width */
+    margin-left: auto;
+    margin-right: auto;
+}
+.filter-toggle-btn span {
+    color: var(--c5);
 }
 
-.filter-group input[type="checkbox"] {
-    margin-right: 10px;
-    accent-color: var(--c5);
-}
 
+/* --- Product Grid Styling --- */
 .main-content {
     min-width: 0;
 }
 
 .product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 2.5rem;
+    /* Adjusted Adaptive layout for full width: */
+    /* 1 col on small mobile, 2 cols on tablet, 3-4 cols on large tablet/desktop */
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 2rem;
 }
 
-.product-card {
-    background-color: #fff;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    position: relative;
-    border: 1px solid var(--light-gray);
-}
+/* --- Responsive Adjustments --- */
 
-.product-card:hover {
-    box-shadow: 0 14px 28px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.08);
-    transform: translateY(-8px);
-}
-
-.product-image-container {
-    position: relative;
-    overflow: hidden;
-}
-
-.product-card img {
-    width: 100%;
-    height: 350px;
-    object-fit: cover;
-    display: block;
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.product-card:hover img {
-    transform: scale(1.05);
-}
-
-.product-info {
-    padding: 1.5rem;
-    text-align: center;
-}
-
-.product-name {
-    font-size: 1.1rem;
-    font-weight: 500;
-    margin: 0 0 0.5rem 0;
-    color: var(--text-color);
-}
-
-.product-price {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--c5);
-}
-
-.add-to-cart-btn {
-    position: absolute;
-    bottom: 120px;
-    left: 50%;
-    transform: translate(-50%, 10px);
-    opacity: 0;
-    background-color: var(--c5);
-    color: white;
-    border: none;
-    padding: 0.8rem 1.5rem;
-    border-radius: 50px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    white-space: nowrap;
-}
-
-.product-card:hover .add-to-cart-btn {
-    transform: translate(-50%, 0);
-    opacity: 1;
-}
-
-.add-to-cart-btn:hover {
-    background-color: var(--c6);
-}
-
-@media (max-width: 992px) {
-    .shop-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .sidebar {
-        margin-bottom: 3rem;
-    }
-}
-
-@media (max-width: 768px) {
+/* Tablet and Large Mobile (Below 1024px to 600px) */
+@media (max-width: 1024px) {
     .product-grid {
         grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     }
 }
 
-@media (max-width: 576px) {
+/* Small Mobile (Below 600px) */
+@media (max-width: 600px) {
     .product-grid {
+        /* Single column for narrow mobile screens */
         grid-template-columns: 1fr;
+    }
+    .filter-toggle-btn {
+        max-width: 100%; /* Full width filter button on mobile */
     }
 }
 </style>
-

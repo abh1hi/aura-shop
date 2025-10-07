@@ -17,9 +17,13 @@
                             <p>Size: M, Color: White</p>
                         </div>
                         <div class="item-quantity">
-                            <input type="number" value="1" min="1">
+                            <label for="quantity1" class="mobile-label">Qty:</label>
+                            <input id="quantity1" type="number" value="1" min="1">
                         </div>
-                        <div class="item-total">$85.00</div>
+                        <div class="item-total">
+                            <span class="mobile-label">Total:</span>
+                            $85.00
+                        </div>
                     </div>
                     <div class="cart-item">
                         <img src="https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Product Image">
@@ -28,9 +32,13 @@
                             <p>Size: 32, Color: Blue</p>
                         </div>
                         <div class="item-quantity">
-                            <input type="number" value="1" min="1">
+                             <label for="quantity2" class="mobile-label">Qty:</label>
+                            <input id="quantity2" type="number" value="1" min="1">
                         </div>
-                        <div class="item-total">$120.00</div>
+                        <div class="item-total">
+                             <span class="mobile-label">Total:</span>
+                            $120.00
+                        </div>
                     </div>
                 </div>
                 <aside class="order-summary">
@@ -57,13 +65,21 @@
 <style scoped>
 .cart-layout {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 2fr 1fr; /* Desktop default */
     gap: 4rem;
     align-items: flex-start;
 }
+
+/* Mobile label hidden by default */
+.mobile-label {
+    display: none;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
 .cart-items .cart-item {
     display: grid;
-    grid-template-columns: 100px 1fr auto auto;
+    grid-template-columns: 100px 1fr auto auto; /* Desktop grid for image, details, qty, total */
     gap: 2rem;
     align-items: center;
     margin-bottom: 2rem;
@@ -95,6 +111,7 @@
 .item-total {
     font-weight: 600;
     font-size: 1.2rem;
+    text-align: right;
 }
 .order-summary {
     background-color: #fff;
@@ -134,9 +151,62 @@
 }
 
 @media (max-width: 992px) {
+    /* Tablet/Mobile Layout: Stack cart and summary */
     .cart-layout {
         grid-template-columns: 1fr;
     }
+    
+    /* Remove sticky position on mobile */
+    .order-summary {
+        position: static;
+        margin-top: 3rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .cart-items .cart-item {
+        /* Mobile Layout: Stack elements vertically */
+        grid-template-columns: 80px 1fr;
+        grid-template-areas:
+            "img details"
+            "img quantity"
+            "total total";
+        column-gap: 1.5rem;
+    }
+
+    .cart-item img {
+        grid-area: img;
+        height: auto;
+    }
+    
+    .item-details {
+        grid-area: details;
+    }
+    
+    .item-quantity {
+        grid-area: quantity;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .item-total {
+        grid-area: total;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left;
+        padding-top: 1rem;
+        border-top: 1px dashed var(--light-gray);
+    }
+    
+    .mobile-label {
+        display: inline-block;
+    }
+    
+    .item-quantity input {
+        width: 70px;
+    }
 }
 </style>
-
