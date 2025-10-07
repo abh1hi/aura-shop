@@ -2,8 +2,9 @@
   <div class="product-card">
     <div class="product-image-container">
       <img :src="product.imageUrl || 'https://placehold.co/400x600/f4f4f4/ccc?text=AURA'" :alt="product.name">
-      <!-- Moved button inside product-image-container to ensure it's always visible on top -->
-      <button class="add-to-cart-btn">Quick Add</button>
+      <button class="quick-add-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
     </div>
     <div class="product-info">
       <h3 class="product-name">{{ product.name }}</h3>
@@ -24,89 +25,67 @@ defineProps({
 <style scoped>
 .product-card {
   background-color: #fff;
-  border-radius: 16px; /* Increased radius for modern look */
+  border-radius: 16px;
   overflow: hidden;
-  transition: box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-  position: relative;
-  border: 1px solid var(--light-gray);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .product-card:hover {
-  box-shadow: 0 14px 28px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.08);
-  transform: translateY(-8px);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
 }
 
 .product-image-container {
   position: relative;
-  overflow: hidden;
 }
 
 .product-card img {
   width: 100%;
-  height: 350px;
+  height: 300px;
   object-fit: cover;
   display: block;
-  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.product-card:hover img {
-  transform: scale(1.05);
+.quick-add-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.product-card:hover .quick-add-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.quick-add-btn svg {
+  color: #000;
 }
 
 .product-info {
-  padding: 1.25rem 1rem;
-  text-align: left;
+  padding: 1rem;
 }
 
 .product-name {
   font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 0.5rem 0;
-  color: var(--text-color);
+  font-weight: 500;
+  margin: 0 0 0.25rem 0;
 }
 
 .product-price {
   font-size: 1.1rem;
-  font-weight: 500;
-  color: var(--c5);
-}
-
-/* Quick Add Button now positioned absolutely on the image and shows on hover/mobile interaction */
-.add-to-cart-btn {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
-    background-color: var(--c5);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 0.9rem;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    opacity: 0;
-    transform: scale(0.8);
-    transition: all 0.3s ease;
-    white-space: nowrap;
-}
-
-.product-card:hover .add-to-cart-btn {
-    opacity: 1;
-    transform: scale(1);
-}
-
-/* Ensure button is visible on touch devices/mobile */
-@media (max-width: 992px) {
-    .add-to-cart-btn {
-        opacity: 1;
-        transform: scale(1);
-        padding: 0.4rem 0.8rem;
-        font-size: 0.85rem;
-    }
-}
-
-.add-to-cart-btn:hover {
-  background-color: var(--c6);
+  font-weight: 600;
+  color: #333;
 }
 </style>

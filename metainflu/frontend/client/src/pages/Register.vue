@@ -1,40 +1,30 @@
-<!-- File: frontend/client/src/pages/Register.vue -->
 <template>
-    <div>
-        <section class="page-header">
-            <div class="container">
-                <h1>Create Account</h1>
-            </div>
-        </section>
-
-        <section class="section container">
-            <div class="auth-container">
-                 <h2>Join AURA</h2>
-                <p>Create an account to enjoy a seamless shopping experience.</p>
-                <form class="auth-form" @submit.prevent="handleRegister">
-                     <div class="form-group">
-                        <label for="name">Name</label>
-                        <input id="name" name="name" type="text" autocomplete="name" required v-model="name">
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input id="email" name="email" type="email" autocomplete="email" required v-model="email">
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input id="password" name="password" type="password" autocomplete="new-password" required v-model="password">
-                    </div>
-                    <div class="form-actions">
-                         <button type="submit" class="cta-button">Create Account</button>
-                    </div>
-                </form>
-                 <p class="switch-auth">
-                    Already have an account? <router-link to="/login">Sign in</router-link>
-                </p>
-            </div>
-        </section>
+  <div class="auth-page">
+    <div class="auth-container">
+      <h1 class="auth-title">Create Account</h1>
+      <p class="auth-subtitle">Join AURA to enjoy a seamless shopping experience.</p>
+      <form class="auth-form" @submit.prevent="handleRegister">
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input id="name" name="name" type="text" autocomplete="name" required v-model="name">
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="email" required v-model="email">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="new-password" required v-model="password">
+        </div>
+        <button type="submit" class="auth-button">Create Account</button>
+      </form>
+      <p class="switch-auth">
+        Already have an account? <router-link to="/login">Sign in</router-link>
+      </p>
     </div>
+  </div>
 </template>
+
 <script>
 import authService from '../services/authService';
 import { useRouter } from 'vue-router';
@@ -77,84 +67,73 @@ export default {
 </script>
 
 <style scoped>
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+  background-color: #f4f4f9;
+}
+
 .auth-container {
-    max-width: 500px;
-    margin: 0 auto;
-    background-color: #fff;
-    padding: 3rem;
-    border-radius: 12px;
-    border: 1px solid var(--light-gray);
-    text-align: center;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 16px;
 }
 
-.auth-container h2 {
-    font-size: 2.5rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: var(--c5);
+.auth-title {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
 }
 
-.auth-container p {
-    color: #555;
-    margin-bottom: 2.5rem;
-}
-
-.auth-form {
-    text-align: left;
+.auth-subtitle {
+  text-align: center;
+  color: #555;
+  margin-bottom: 2rem;
 }
 
 .form-group {
-    margin-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-group label {
-    display: block;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-    color: var(--text-color);
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
 }
 
 .form-group input {
-    width: 100%;
-    padding: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-family: 'Poppins', sans-serif;
-    transition: border-color 0.3s, box-shadow 0.3s;
-    box-sizing: border-box;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
-.form-group input:focus {
-    outline: none;
-    border-color: var(--c5);
-    box-shadow: 0 0 0 3px rgba(154, 82, 255, 0.2);
-}
-
-.form-actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    margin-top: 2rem;
+.auth-button {
+  width: 100%;
+  padding: 1rem;
+  background-color: #000;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-top: 1rem;
 }
 
 .switch-auth {
-    margin-top: 2rem;
-    font-size: 1rem;
+  text-align: center;
+  margin-top: 1.5rem;
 }
 
 .switch-auth a {
-    color: var(--c5);
-    font-weight: 500;
-    text-decoration: none;
-    transition: color 0.3s;
-}
-.switch-auth a:hover {
-    color: var(--c6);
-}
-
-.cta-button {
-    width: 100%;
+  color: #000;
+  font-weight: 600;
+  text-decoration: none;
 }
 </style>

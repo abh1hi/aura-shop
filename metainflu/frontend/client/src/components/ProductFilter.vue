@@ -7,7 +7,7 @@
         <div class="sidebar-content">
             <div class="sidebar-header">
                 <h3>Filters</h3>
-                <!-- Close button for mobile/overlay -->
+                <!-- Close button for mobile -->
                 <button class="close-btn" @click="$emit('close')">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
@@ -16,6 +16,7 @@
             <div class="filter-group">
                 <h4>Category</h4>
                 <div class="options-grid">
+                    <!-- Note: In a real app, these values would be bound to model/state -->
                     <label><input type="radio" name="category" checked> All</label>
                     <label><input type="radio" name="category"> Tops</label>
                     <label><input type="radio" name="category"> Bottoms</label>
@@ -66,22 +67,20 @@ defineEmits(['close']);
 
 /* --- Filter Sidebar Styling (Native Look) --- */
 .sidebar {
-    /* Always fixed off-screen initially */
     position: fixed;
     top: 0;
-    right: 0; /* Align to the right for a slide-in effect */
+    right: 0;
     width: 100%;
     max-width: 350px;
     height: 100%;
     z-index: 100;
-    transform: translateX(100%); /* Start off-screen (right) */
+    transform: translateX(100%);
     box-shadow: 4px 0 10px rgba(0, 0, 0, 0.2);
     padding: 0;
     background-color: var(--bg-color);
     transition: transform 0.3s ease;
 }
 
-/* State to show the sidebar */
 .sidebar-open {
     transform: translateX(0);
 }
@@ -115,6 +114,9 @@ defineEmits(['close']);
     cursor: pointer;
     color: var(--text-color);
     padding: 0;
+    /* FIX: Remove outline */
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .filter-group {
@@ -149,11 +151,19 @@ defineEmits(['close']);
     font-size: 0.9rem;
     font-weight: 500;
     transition: background-color 0.2s, border-color 0.2s;
+    /* FIX: Remove outline */
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .options-grid input[type="checkbox"],
 .options-grid input[type="radio"] {
     display: none;
+}
+
+/* Also ensure input siblings do not show outlines */
+.options-grid label:focus-within {
+    outline: none;
 }
 
 .options-grid input:checked + label,
@@ -173,7 +183,14 @@ defineEmits(['close']);
     color: white;
     border: none;
     cursor: pointer;
+    /* FIX: Remove outline */
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
 }
+.apply-filters-btn:focus {
+    outline: none;
+}
+
 
 /* Media Query for accessibility/larger filter panels */
 @media (max-width: 600px) {
