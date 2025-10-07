@@ -3,15 +3,28 @@
     <div class="vendor-sidebar-sticky">
       <h3 class="sidebar-title">Vendor Menu</h3>
       <nav class="sidebar-nav">
-        <router-link to="/vendor-panel">Dashboard</router-link>
-        <router-link to="/add-product">Add Product</router-link>
-        <router-link to="/view-sales">View Sales</router-link>
-        <router-link to="/invoices">Invoices</router-link>
-        <router-link to="/returns">Returns</router-link>
+        <!-- Dashboard (Base path of the nested route) -->
+        <router-link to="/vendor-panel" exact-active-class="router-link-exact-active">Dashboard</router-link>
+        
+        <!-- Updated to point to ManageProducts -->
+        <router-link to="/vendor-panel/manage-products">Manage Products</router-link>
+        
+        <!-- Updated to point to OrderFulfillment -->
+        <router-link to="/vendor-panel/order-fulfillment">Order Fulfillment</router-link>
+        
+        <!-- Updated to point to Analytics -->
+        <router-link to="/vendor-panel/analytics">Analytics & Reports</router-link>
+        
+        <!-- Renamed path for Returns -->
+        <router-link to="/vendor-panel/returns">Returns</router-link>
       </nav>
     </div>
   </aside>
 </template>
+
+<script setup>
+// This component now exists in the local state.
+</script>
 
 <style scoped>
 .vendor-sidebar {

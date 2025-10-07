@@ -1,106 +1,161 @@
 <template>
   <div class="add-product-page">
-    <PageHeader title="Add New Product" />
-    <div class="container add-product-layout">
-      <div class="add-product-form">
-        <h2>Product Details</h2>
-        <form @submit.prevent="addProduct">
-          <div class="form-group">
-            <label for="product-name">Product Name</label>
-            <input type="text" id="product-name" v-model="product.name" required>
-          </div>
-          <div class="form-group">
-            <label for="product-price">Price</label>
-            <input type="number" id="product-price" v-model.number="product.price" required>
-          </div>
-          <div class="form-group">
-            <label for="product-image-url">Image URL</label>
-            <input type="text" id="product-image-url" v-model="product.imageUrl" required>
-          </div>
-          <button type="submit" class="auth-button">Add Product</button>
+    <!-- Back Button using router-link to ensure in-app navigation -->
+    <router-link to="/vendor-panel/manage-products" class="back-button">
+         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+         Back to Product List
+    </router-link>
+    
+    <div class="table-card mt-4">
+        <h2 class="section-subtitle">Add New Product Details</h2>
+        
+        <form @submit.prevent="saveProduct" class="add-form-layout">
+            <div class="form-group">
+                <label for="name">Product Name</label>
+                <input type="text" id="name" required v-model="newProduct.name">
+            </div>
+            <div class="form-group">
+                <label for="price">Price ($)</label>
+                <input type="number" id="price" required v-model.number="newProduct.price">
+            </div>
+            <div class="form-group full-width">
+                <label for="description">Description</label>
+                <textarea id="description" rows="4" required v-model="newProduct.description"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="stock">Initial Stock</label>
+                <input type="number" id="stock" required v-model.number="newProduct.stock">
+            </div>
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" required v-model="newProduct.category">
+                    <option value="">Select Category</option>
+                    <option value="tops">Tops</option>
+                    <option value="bottoms">Bottoms</option>
+                    <option value="outerwear">Outerwear</option>
+                </select>
+            </div>
+            <div class="form-group full-width">
+                <label for="imageUrl">Image URL</label>
+                <input type="text" id="imageUrl" required v-model="newProduct.imageUrl">
+            </div>
+            
+            <div class="form-actions full-width">
+                <button type="submit" class="cta-button save-button">Save Product</button>
+            </div>
         </form>
-      </div>
-      <div class="product-preview">
-        <h2>Product Preview</h2>
-        <ProductCard :product="product" />
-      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue';
-import PageHeader from '../components/PageHeader.vue';
-import ProductCard from '../components/ProductCard.vue';
+import { useRouter } from 'vue-router';
 
-const product = ref({
-  name: 'Sample Product',
-  price: 99.99,
-  imageUrl: 'https://placehold.co/400x600/f4f4f4/ccc?text=AURA'
+const router = useRouter();
+
+const newProduct = ref({
+    name: '',
+    price: 0,
+    description: '',
+    stock: 0,
+    category: '',
+    imageUrl: '',
 });
 
-const addProduct = () => {
-  // Add product logic here
-  console.log('Adding product:', product.value);
-};
+const saveProduct = () => {
+    // In a real application, you would send this data to the backend API here.
+    console.log("Saving new product:", newProduct.value);
+
+    // After saving, navigate back to the product list (ManageProducts)
+    router.push('/vendor-panel/manage-products');
+}
 </script>
 
 <style scoped>
-.add-product-page {
+.page-container {
   padding-bottom: 4rem;
 }
 
-.add-product-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
+.table-card {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+.section-subtitle {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
 }
 
-.add-product-form h2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
+/* --- Form Styles --- */
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    color: #555;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+}
+.back-button:hover {
+    color: var(--c5);
 }
 
+.add-form-layout {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
 .form-group {
-  margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
 }
-
 .form-group label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #333;
 }
-
-.form-group input {
-  width: 100%;
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-sizing: border-box;
+.form-group input,
+.form-group textarea,
+.form-group select {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
 }
-
-.auth-button {
-  width: 100%;
-  padding: 1rem;
-  background-color: #000;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  margin-top: 1rem;
+.full-width {
+    grid-column: span 2;
 }
-
-.product-preview h2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
+.form-actions {
+    margin-top: 1rem;
+    text-align: right;
+}
+.cta-button {
+    background-color: var(--c5);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    border: none;
+    cursor: pointer;
 }
 
 @media (max-width: 768px) {
-  .add-product-layout {
-    grid-template-columns: 1fr;
-  }
+    .add-form-layout {
+        grid-template-columns: 1fr;
+    }
+    .full-width {
+        grid-column: span 1;
+    }
+    .form-actions {
+        text-align: center;
+    }
 }
 </style>
