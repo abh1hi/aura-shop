@@ -12,42 +12,7 @@
     <section class="section container">
       <h2 class="section-title">Featured Products</h2>
       <div class="product-grid">
-        <div class="product-card">
-          <div class="product-image-container">
-            <img src="https://images.unsplash.com/photo-1584273142342-294256955942?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Product 1">
-          </div>
-          <div class="product-info">
-            <h3 class="product-name">Classic Linen Shirt</h3>
-            <p class="product-price">$85.00</p>
-          </div>
-        </div>
-        <div class="product-card">
-          <div class="product-image-container">
-            <img src="https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Product 2">
-          </div>
-          <div class="product-info">
-            <h3 class="product-name">Slim-Fit Denim</h3>
-            <p class="product-price">$120.00</p>
-          </div>
-        </div>
-        <div class="product-card">
-            <div class="product-image-container">
-                <img src="https://images.unsplash.com/photo-1551028719-00167b16e2a9?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Product 3">
-            </div>
-            <div class="product-info">
-                <h3 class="product-name">Merino Wool Sweater</h3>
-                <p class="product-price">$150.00</p>
-            </div>
-        </div>
-        <div class="product-card">
-            <div class="product-image-container">
-                <img src="https://images.unsplash.com/photo-1523381294911-8d3cead13475?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Product 4">
-            </div>
-            <div class="product-info">
-                <h3 class="product-name">Graphic Tee</h3>
-                <p class="product-price">$39.99</p>
-            </div>
-        </div>
+        <ProductCard v-for="product in featuredProducts" :key="product.id" :product="product" />
       </div>
     </section>
 
@@ -87,7 +52,15 @@
 </template>
 
 <script setup>
-// No script needed for this static page
+import { ref } from 'vue';
+import ProductCard from '../components/ProductCard.vue';
+
+const featuredProducts = ref([
+  { id: 1, name: 'Classic Linen Shirt', price: 85.00, imageUrl: 'https://images.unsplash.com/photo-1584273142342-294256955942?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+  { id: 2, name: 'Slim-Fit Denim', price: 120.00, imageUrl: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+  { id: 3, name: 'Merino Wool Sweater', price: 150.00, imageUrl: 'https://images.unsplash.com/photo-1551028719-00167b16e2a9?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+  { id: 4, name: 'Graphic Tee', price: 39.99, imageUrl: 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+]);
 </script>
 
 <style scoped>

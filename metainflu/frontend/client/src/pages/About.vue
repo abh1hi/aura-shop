@@ -1,11 +1,7 @@
 <!-- File: src/views/About.vue -->
 <template>
     <div>
-        <section class="page-header">
-            <div class="container">
-                <h1>About AURA</h1>
-            </div>
-        </section>
+        <PageHeader title="About AURA" />
 
         <section class="section container">
             <div class="about-grid">
@@ -40,6 +36,10 @@
         </section>
     </div>
 </template>
+
+<script setup>
+import PageHeader from '../components/PageHeader.vue';
+</script>
 
 <style scoped>
 .about-grid {

@@ -1,14 +1,17 @@
-
-
-// File: backend/routes/authRoutes.js
+/*
+  File: metainflu/backend/routes/authRoutes.js
+  Purpose: Defines authentication routes, including a new dedicated route for admin login.
+*/
 
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser } = require('../controllers/authController');
+const { registerUser, loginUser, loginAdmin } = require('../controllers/authController');
 
 // Define the routes for user authentication
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 
-module.exports = router;
+// Define the new route for admin login
+router.post('/admin/login', loginAdmin);
 
+module.exports = router;

@@ -2,18 +2,24 @@
 <template>
   <header>
     <div class="container header-content">
-      <a href="#" class="logo">AURA</a>
+      <router-link to="/" class="logo">AURA</router-link>
       <nav :class="{ active: isNavActive }">
-        <!-- In a Vue app, these would be <router-link> components -->
-        <a href="#" style="color: var(--c5);">Home</a>
-        <a href="#">Shop</a>
-        <a href="#">About</a>
-        <a href="#">Contact</a>
+        <router-link to="/" @click="closeNav">Home</router-link>
+        <router-link to="/shop" @click="closeNav">Shop</router-link>
+        <router-link to="/about" @click="closeNav">About</router-link>
+        <router-link to="/contact" @click="closeNav">Contact</router-link>
+        <router-link to="/customer-service" @click="closeNav">Support</router-link>
       </nav>
       <div class="header-actions">
         <a href="#"><span>Search</span></a>
-        <a href="#"><span>Account</span></a>
-        <a href="#"><span>Cart (0)</span></a>
+        <template v-if="globalState.isLoggedIn">
+            <router-link to="/account"><span>Account</span></router-link>
+            <a href="#" @click.prevent="logout"><span>Logout</span></a>
+        </template>
+        <template v-else>
+            <router-link to="/login"><span>Login</span></router-link>
+        </template>
+        <router-link to="/cart"><span>Cart (0)</span></router-link>
       </div>
       <div class="menu-toggle" @click="toggleNav">
         <span></span>
@@ -26,11 +32,28 @@
 
 <script setup>
 import { ref } from 'vue';
+import { globalState } from '../main.js';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const isNavActive = ref(false);
 
 const toggleNav = () => {
   isNavActive.value = !isNavActive.value;
+};
+
+const closeNav = () => {
+  if (isNavActive.value) {
+    isNavActive.value = false;
+  }
+};
+
+const logout = () => {
+  localStorage.removeItem('user');
+  globalState.isLoggedIn = false;
+  globalState.user = null;
+  closeNav();
+  router.push('/login');
 };
 </script>
 
@@ -84,11 +107,13 @@ nav a::after {
   transition: width 0.3s;
 }
 
-nav a:hover {
+nav a:hover,
+nav a.router-link-exact-active {
   color: var(--c5);
 }
 
-nav a:hover::after {
+nav a:hover::after,
+nav a.router-link-exact-active::after {
   width: 100%;
 }
 
@@ -103,6 +128,7 @@ nav a:hover::after {
   text-decoration: none;
   color: var(--text-color);
   transition: color 0.3s;
+  font-weight: 500;
 }
 
 .header-actions a:hover {
@@ -142,9 +168,23 @@ nav a:hover::after {
   nav.active {
     transform: translateX(0);
   }
+  
+  nav a {
+      font-size: 1.5rem;
+  }
 
   .menu-toggle {
     display: block;
+  }
+  
+  nav.active + .header-actions + .menu-toggle span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+  nav.active + .header-actions + .menu-toggle span:nth-child(2) {
+    opacity: 0;
+  }
+  nav.active + .header-actions + .menu-toggle span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
   }
 }
 
@@ -155,6 +195,12 @@ nav a:hover::after {
 
   .header-actions a svg {
     font-size: 1.5rem;
+  }
+  .header-actions a {
+    font-size: 1rem;
+  }
+  .header-actions {
+      gap: 1rem;
   }
 }
 </style>

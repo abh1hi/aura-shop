@@ -1,25 +1,21 @@
-// File: backend/middleware/authMiddleware.js
-
+/*
+  File: metainflu/backend/middleware/authMiddleware.js
+  Purpose: This file contains Express middleware for authentication and authorization.
+  'protect' verifies the JWT, and 'admin' checks if the authenticated user has an admin role.
+*/
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 
-// Middleware to protect routes by verifying a JWT
+// Middleware to protect routes by verifying a JWT.
 const protect = asyncHandler(async (req, res, next) => {
   let token;
 
-  // Check if the authorization header exists and starts with 'Bearer'
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
-      // Get token from header
       token = req.headers.authorization.split(' ')[1];
-
-      // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Get user from the token payload and attach to the request object
       req.user = await User.findById(decoded.id).select('-password');
-
       next();
     } catch (error) {
       console.error(error);
@@ -34,5 +30,15 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 });
 
+// Middleware to check if the user is an admin.
+const admin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(401);
+    throw new Error('Not authorized as an admin');
+  }
+};
 
-module.exports = { protect };
+module.exports = { protect, admin };
+

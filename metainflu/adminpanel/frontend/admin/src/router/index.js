@@ -1,12 +1,15 @@
-
-
-// File: frontend/admin/src/router/index.js
+/*
+  File: metainflu/adminpanel/frontend/admin/src/router/index.js
+  Purpose: This file defines the navigation routes for the admin panel Vue application.
+  It maps URL paths to their corresponding page components.
+*/
 import { createRouter, createWebHistory } from 'vue-router';
 import AdminDashboard from '../pages/AdminDashboard.vue';
-import AdminInfluencers from '../pages/AdminInfluencers.vue';
+import AdminUsers from '../pages/AdminUsers.vue';
+import AdminProducts from '../pages/AdminProducts.vue';
 import AdminCampaigns from '../pages/AdminCampaigns.vue';
 import AdminPayments from '../pages/AdminPayments.vue';
-
+import AdminLogin from '../pages/AdminLogin.vue';
 const routes = [
   {
     path: '/',
@@ -14,9 +17,19 @@ const routes = [
     component: AdminDashboard,
   },
   {
-    path: '/influencers',
-    name: 'AdminInfluencers',
-    component: AdminInfluencers,
+    path: '/login',
+    name: 'AdminLogin',
+    component: AdminLogin,
+  },
+  {
+    path: '/users',
+    name: 'AdminUsers',
+    component: AdminUsers,
+  },
+  {
+    path: '/products',
+    name: 'AdminProducts',
+    component: AdminProducts,
   },
   {
     path: '/campaigns',
@@ -36,3 +49,4 @@ const router = createRouter({
 });
 
 export default router;
+

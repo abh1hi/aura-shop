@@ -1,11 +1,7 @@
 <!-- File: src/views/Contact.vue -->
 <template>
     <div>
-        <section class="page-header">
-            <div class="container">
-                <h1>Contact Us</h1>
-            </div>
-        </section>
+        <PageHeader title="Contact Us" />
 
         <section class="section container">
             <div class="contact-grid">
@@ -46,6 +42,10 @@
         </section>
     </div>
 </template>
+
+<script setup>
+import PageHeader from '../components/PageHeader.vue';
+</script>
 
 <style scoped>
 .contact-grid {

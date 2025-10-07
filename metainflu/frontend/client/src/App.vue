@@ -2,12 +2,7 @@
   <div id="app">
     <Header />
     <main>
-      <!-- 
-        In a real Vue app, you would use Vue Router here 
-        to render the different pages. For this conversion,
-        we are showing the Home page by default.
-      -->
-      <Home />
+      <router-view></router-view>
     </main>
     <Footer />
   </div>
@@ -16,9 +11,6 @@
 <script setup>
 import Header from './components/Header.vue';
 import Footer from './components/Footer.vue';
-import Home from './pages/Home.vue';
-// To display other pages, you would import them like this:
-// import About from './views/About.vue';
 </script>
 
 <style>
@@ -74,6 +66,8 @@ body {
     font-weight: 600;
     transition: background-color 0.3s, transform 0.3s;
     display: inline-block;
+    border: none;
+    cursor: pointer;
 }
 
 .cta-button:hover {

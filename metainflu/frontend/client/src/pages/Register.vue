@@ -1,91 +1,55 @@
 <!-- File: frontend/client/src/pages/Register.vue -->
 <template>
-  <div class="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="flex flex-col md:flex-row w-full max-w-5xl bg-white rounded-3xl shadow-lg overflow-hidden">
-      <div class="w-full md:w-1/2 p-10 flex flex-col justify-center">
-        <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
-          Create an account
-        </h2>
-        <p class="text-gray-600 mb-6">Sing up and get 30 day free trial</p>
-        <form class="space-y-6" @submit.prevent="handleRegister">
-          <div>
-            <label for="full-name" class="sr-only">Full-name</label>
-            <input id="full-name" name="name" type="text" autocomplete="name" required
-                   v-model="name"
-                   class="appearance-none rounded-md relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                   placeholder="Full-name">
-          </div>
-          <div>
-            <label for="email-address" class="sr-only">Email</label>
-            <input id="email-address" name="email" type="email" autocomplete="email" required
-                   v-model="email"
-                   class="appearance-none rounded-md relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                   placeholder="Email">
-          </div>
-          <div>
-            <label for="password" class="sr-only">Password</label>
-            <input id="password" name="password" type="password" autocomplete="new-password" required
-                   v-model="password"
-                   class="appearance-none rounded-md relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                   placeholder="Password">
-          </div>
-          <div class="mt-4">
-            <p class="text-sm font-medium text-gray-700">I am a...</p>
-            <div class="mt-2 flex space-x-4">
-              <label class="inline-flex items-center">
-                <input type="radio" name="role" value="client" v-model="role" class="form-radio text-blue-600">
-                <span class="ml-2 text-gray-700">Client</span>
-              </label>
-              <label class="inline-flex items-center">
-                <input type="radio" name="role" value="influencer" v-model="role" class="form-radio text-blue-600">
-                <span class="ml-2 text-gray-700">Influencer</span>
-              </label>
+    <div>
+        <section class="page-header">
+            <div class="container">
+                <h1>Create Account</h1>
             </div>
-          </div>
-          <div v-if="role === 'client'" class="mt-4">
-            <p class="text-sm font-medium text-gray-700">My account is...</p>
-            <div class="mt-2 flex space-x-4">
-              <label class="inline-flex items-center">
-                <input type="radio" name="accountType" value="b2b" v-model="accountType" class="form-radio text-blue-600">
-                <span class="ml-2 text-gray-700">Business</span>
-              </label>
-              <label class="inline-flex items-center">
-                <input type="radio" name="accountType" value="c2c" v-model="accountType" class="form-radio text-blue-600">
-                <span class="ml-2 text-gray-700">Personal</span>
-              </label>
+        </section>
+
+        <section class="section container">
+            <div class="auth-container">
+                 <h2>Join AURA</h2>
+                <p>Create an account to enjoy a seamless shopping experience.</p>
+                <form class="auth-form" @submit.prevent="handleRegister">
+                     <div class="form-group">
+                        <label for="name">Name</label>
+                        <input id="name" name="name" type="text" autocomplete="name" required v-model="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input id="email" name="email" type="email" autocomplete="email" required v-model="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input id="password" name="password" type="password" autocomplete="new-password" required v-model="password">
+                    </div>
+                    <div class="form-actions">
+                         <button type="submit" class="cta-button">Create Account</button>
+                    </div>
+                </form>
+                 <p class="switch-auth">
+                    Already have an account? <router-link to="/login">Sign in</router-link>
+                </p>
             </div>
-          </div>
-          <div>
-            <button type="submit"
-                    class="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#ffc107] hover:bg-[#e0ad00] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ffc107]">
-              Submit
-            </button>
-          </div>
-        </form>
-        <div class="mt-6 text-center">
-          <p class="text-sm text-gray-600">Have an account? <router-link to="/login" class="font-medium text-blue-600 hover:text-blue-500">
-            Sign in
-          </router-link></p>
-        </div>
-      </div>
-      <div class="hidden md:block md:w-1/2 relative bg-gray-200">
-        <img src="https://placehold.co/800x600/cccccc/ffffff?text=Your+Image+Here" alt="Marketing Team" class="w-full h-full object-cover">
-      </div>
+        </section>
     </div>
-  </div>
 </template>
 <script>
 import authService from '../services/authService';
-import { globalState } from '../main.js';
+import { useRouter } from 'vue-router';
+
 export default {
   name: 'Register',
+  setup() {
+    const router = useRouter();
+    return { router };
+  },
   data() {
     return {
       name: '',
       email: '',
       password: '',
-      role: 'client',
-      accountType: 'b2b',
     };
   },
   methods: {
@@ -97,29 +61,100 @@ export default {
           password: this.password,
         };
 
-        if (this.role === 'client') {
-          userData.role = 'client';
-          userData.accountType = this.accountType;
-        } else {
-          userData.role = this.role;
-        }
-
-        const response = await authService.register(userData);
-        console.log('Registration successful:', response);
-        globalState.isLoggedIn = true;
-        globalState.user = response;
+        await authService.register(userData);
+        console.log('Registration successful');
         
-        if (response.role === 'influencer') {
-          this.$router.push('/onboarding');
-        } else if (response.accountType === 'b2b') {
-          this.$router.push('/b2b-onboarding');
-        } else {
-          this.$router.push('/c2c-onboarding');
-        }
+        // Redirect to login page after successful registration
+        this.router.push('/login');
+        
       } catch (error) {
         console.error('Registration failed:', error.message);
+        // Here you could add logic to show an error message to the user
       }
     },
   },
 };
 </script>
+
+<style scoped>
+.auth-container {
+    max-width: 500px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 3rem;
+    border-radius: 12px;
+    border: 1px solid var(--light-gray);
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+
+.auth-container h2 {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--c5);
+}
+
+.auth-container p {
+    color: #555;
+    margin-bottom: 2.5rem;
+}
+
+.auth-form {
+    text-align: left;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: 'Poppins', sans-serif;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--c5);
+    box-shadow: 0 0 0 3px rgba(154, 82, 255, 0.2);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 2rem;
+}
+
+.switch-auth {
+    margin-top: 2rem;
+    font-size: 1rem;
+}
+
+.switch-auth a {
+    color: var(--c5);
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+.switch-auth a:hover {
+    color: var(--c6);
+}
+
+.cta-button {
+    width: 100%;
+}
+</style>

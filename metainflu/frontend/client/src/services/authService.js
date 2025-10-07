@@ -1,13 +1,14 @@
-// File: frontend/client/src/services/authService.js
-
-// This file handles all API calls related to user authentication
-
-// The base URL of your backend API
+/*
+  File: metainflu/frontend/client/src/services/authService.js
+  Purpose: This service is exclusively for the CLIENT-FACING storefront.
+  I have updated the API_URL to point to your local backend server.
+*/
 const API_URL = 'http://localhost:5000/api/auth/';
 
 /**
- * Registers a new user by sending a POST request to the backend.
- * @param {object} userData - The user's registration data (name, email, password, role).
+ * Registers a new CLIENT user by sending a POST request to the backend.
+ * All users registered through this function will have the default 'user' role.
+ * @param {object} userData - The user's registration data (name, email, password).
  * @returns {Promise<object>} - A promise that resolves with the user data upon successful registration.
  */
 const register = async (userData) => {
@@ -26,7 +27,7 @@ const register = async (userData) => {
     }
 
     const data = await response.json();
-    // Save user data to localStorage
+    // Save client user data to localStorage
     if (data.token) {
       localStorage.setItem('user', JSON.stringify(data));
     }
@@ -39,7 +40,7 @@ const register = async (userData) => {
 };
 
 /**
- * Authenticates a user by sending a POST request to the backend.
+ * Authenticates a CLIENT user by sending a POST request to the backend.
  * @param {object} userData - The user's login credentials (email, password).
  * @returns {Promise<object>} - A promise that resolves with the user data upon successful login.
  */
@@ -59,7 +60,7 @@ const login = async (userData) => {
     }
 
     const data = await response.json();
-    // Save user data to localStorage
+    // Save client user data to localStorage
     if (data.token) {
       localStorage.setItem('user', JSON.stringify(data));
     }
@@ -71,7 +72,16 @@ const login = async (userData) => {
   }
 };
 
+/**
+ * Logs out the current client user by removing their data from localStorage.
+ */
+const logout = () => {
+  localStorage.removeItem('user');
+};
+
 export default {
   register,
   login,
+  logout,
 };
+
