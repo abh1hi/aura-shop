@@ -1,4 +1,3 @@
-<!-- File: src/views/Cart.vue -->
 <template>
     <div>
         <section class="page-header">
@@ -8,59 +7,156 @@
         </section>
 
         <section class="section container">
-            <div class="cart-layout">
+            <div v-if="isLoading" class="text-center py-10">
+                <p class="text-xl text-gray-500">Loading your cart...</p>
+            </div>
+            <div v-else-if="error" class="text-center py-10">
+                <p class="text-xl text-red-500">Error loading cart: {{ error }}</p>
+                <button @click="fetchCart" class="cta-button mt-4">Try Again</button>
+            </div>
+            <div v-else-if="cartItems.length === 0" class="text-center py-10">
+                <h2 class="text-2xl font-semibold">Your cart is empty.</h2>
+                <p class="text-gray-600 mt-2">Time to find your next great piece!</p>
+                <router-link to="/shop" class="cta-button mt-4">Start Shopping</router-link>
+            </div>
+            <div v-else class="cart-layout">
                 <div class="cart-items">
-                    <div class="cart-item">
-                        <img src="https://images.unsplash.com/photo-1584273142342-294256955942?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Product Image">
+                    <div v-for="item in cartItems" :key="item.product._id" class="cart-item">
+                        <!-- Product Image -->
+                        <img :src="item.product.imageUrl || 'https://placehold.co/100x100/f4f4f4/ccc?text=AURA'" :alt="item.product.name">
+                        
+                        <!-- Item Details & Remove Button -->
                         <div class="item-details">
-                            <h3>Classic Linen Shirt</h3>
-                            <p>Size: M, Color: White</p>
+                            <h3 class="text-xl font-medium">{{ item.product.name }}</h3>
+                            <p class="text-gray-500">
+                                <span v-if="item.size">Size: {{ item.size }}</span>
+                                <span v-if="item.size && item.color">,</span>
+                                <span v-if="item.color"> Color: {{ item.color }}</span>
+                            </p>
+                            <button @click="removeItem(item.product._id)" class="remove-btn">Remove</button>
                         </div>
+                        
+                        <!-- Item Quantity -->
                         <div class="item-quantity">
-                            <label for="quantity1" class="mobile-label">Qty:</label>
-                            <input id="quantity1" type="number" value="1" min="1">
+                            <label :for="'quantity-' + item.product._id" class="mobile-label">Qty:</label>
+                            <!-- Note: Quantity updating logic is omitted for simplicity but would call an API -->
+                            <input 
+                                :id="'quantity-' + item.product._id" 
+                                type="number" 
+                                :value="item.quantity" 
+                                min="1"
+                                @change="updateItemQuantity(item.product._id, $event.target.value)"
+                            >
                         </div>
+                        
+                        <!-- Item Total -->
                         <div class="item-total">
-                            <span class="mobile-label">Total:</span>
-                            $85.00
-                        </div>
-                    </div>
-                    <div class="cart-item">
-                        <img src="https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Product Image">
-                        <div class="item-details">
-                            <h3>Slim-Fit Denim</h3>
-                            <p>Size: 32, Color: Blue</p>
-                        </div>
-                        <div class="item-quantity">
-                             <label for="quantity2" class="mobile-label">Qty:</label>
-                            <input id="quantity2" type="number" value="1" min="1">
-                        </div>
-                        <div class="item-total">
-                             <span class="mobile-label">Total:</span>
-                            $120.00
+                            <span class="mobile-label">Price:</span>
+                            ${{ (item.product.price * item.quantity).toFixed(2) }}
                         </div>
                     </div>
                 </div>
+                
+                <!-- Order Summary -->
                 <aside class="order-summary">
                     <h2>Order Summary</h2>
                     <div class="summary-row">
                         <span>Subtotal</span>
-                        <span>$205.00</span>
+                        <span>${{ cartTotal.subtotal.toFixed(2) }}</span>
                     </div>
                     <div class="summary-row">
                         <span>Shipping</span>
-                        <span>$10.00</span>
+                        <span>${{ cartTotal.shipping.toFixed(2) }}</span>
                     </div>
                     <div class="summary-row total">
                         <span>Total</span>
-                        <span>$215.00</span>
+                        <span>${{ cartTotal.total.toFixed(2) }}</span>
                     </div>
-                    <button class="checkout-btn">Proceed to Checkout</button>
+                    <router-link to="/checkout" class="checkout-btn">Proceed to Checkout</router-link>
                 </aside>
             </div>
         </section>
     </div>
 </template>
+
+<script setup>
+import { ref, onMounted, computed } from 'vue';
+import cartService from '../services/cartService';
+import PageHeader from '../components/PageHeader.vue';
+import { globalState } from '../main.js';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const cartItems = ref([]);
+const isLoading = ref(true);
+const error = ref(null);
+
+const fetchCart = async () => {
+    isLoading.value = true;
+    error.value = null;
+
+    if (!globalState.isLoggedIn) {
+        // If not logged in, redirect to login page
+        router.push('/login');
+        return;
+    }
+
+    try {
+        const data = await cartService.getCart();
+        // Assuming the response structure has an 'items' array
+        cartItems.value = data.items || []; 
+    } catch (err) {
+        error.value = err.message;
+        cartItems.value = [];
+        console.error('Fetch Cart Error:', err);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const removeItem = async (productId) => {
+    if (!confirm('Are you sure you want to remove this item?')) return;
+    
+    try {
+        await cartService.removeItem(productId);
+        // Optimistically update the UI by refetching the cart
+        await fetchCart();
+    } catch (err) {
+        error.value = 'Failed to remove item: ' + err.message;
+        console.error('Remove Item Error:', err);
+    }
+};
+
+const updateItemQuantity = (productId, quantity) => {
+    // NOTE: For a real app, this would trigger an API call to update the cart
+    // For now, we only update the local quantity for display purposes.
+    const itemIndex = cartItems.value.findIndex(item => item.product._id === productId);
+    if (itemIndex > -1) {
+        cartItems.value[itemIndex].quantity = parseInt(quantity);
+    }
+    // A full implementation would involve calling cartService.updateItem(productId, newQuantity)
+};
+
+const cartTotal = computed(() => {
+    const subtotal = cartItems.value.reduce((acc, item) => {
+        // Ensure price and quantity are valid numbers before calculating
+        const price = item.product.price || 0;
+        const quantity = item.quantity || 0;
+        return acc + (price * quantity);
+    }, 0);
+    
+    // Simple logic for shipping cost
+    const shipping = subtotal > 100 ? 0 : 10.00;
+    const total = subtotal + shipping;
+    
+    return { subtotal, shipping, total };
+});
+
+onMounted(() => {
+    fetchCart();
+});
+</script>
 
 <style scoped>
 .cart-layout {
@@ -79,7 +175,7 @@
 
 .cart-items .cart-item {
     display: grid;
-    grid-template-columns: 100px 1fr auto auto; /* Desktop grid for image, details, qty, total */
+    grid-template-columns: 100px 1fr 100px auto; /* Desktop grid: image, details, qty, total */
     gap: 2rem;
     align-items: center;
     margin-bottom: 2rem;
@@ -91,6 +187,8 @@
 }
 .cart-item img {
     width: 100%;
+    height: 100px;
+    object-fit: cover;
     border-radius: 8px;
 }
 .item-details h3 {
@@ -101,8 +199,23 @@
     margin: 0;
     color: #555;
 }
+.remove-btn {
+    background: none;
+    border: none;
+    color: #ff5252;
+    text-decoration: underline;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 0.5rem;
+}
+.item-quantity {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
 .item-quantity input {
-    width: 50px;
+    width: 60px;
     text-align: center;
     padding: 0.5rem;
     border: 1px solid #ccc;
@@ -148,15 +261,15 @@
     font-size: 1.2rem;
     cursor: pointer;
     margin-top: 1rem;
+    display: block; /* Make sure router-link acts like a block element */
+    text-align: center;
+    text-decoration: none;
 }
 
 @media (max-width: 992px) {
-    /* Tablet/Mobile Layout: Stack cart and summary */
     .cart-layout {
         grid-template-columns: 1fr;
     }
-    
-    /* Remove sticky position on mobile */
     .order-summary {
         position: static;
         margin-top: 3rem;
@@ -165,18 +278,20 @@
 
 @media (max-width: 600px) {
     .cart-items .cart-item {
-        /* Mobile Layout: Stack elements vertically */
-        grid-template-columns: 80px 1fr;
+        /* Mobile Grid: image, details in column 1; qty, total stacked in column 2 */
+        grid-template-columns: 80px 1fr; 
         grid-template-areas:
             "img details"
-            "img quantity"
-            "total total";
-        column-gap: 1.5rem;
+            "qty total"; 
+        column-gap: 1rem;
+        row-gap: 0.5rem;
+        padding-bottom: 1.5rem;
     }
 
     .cart-item img {
         grid-area: img;
-        height: auto;
+        height: 80px;
+        width: 80px;
     }
     
     .item-details {
@@ -184,21 +299,19 @@
     }
     
     .item-quantity {
-        grid-area: quantity;
+        grid-area: qty;
         display: flex;
+        justify-content: flex-start;
         align-items: center;
-        gap: 1rem;
-        margin-top: 1rem;
+        gap: 0.5rem;
     }
     
     .item-total {
         grid-area: total;
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-end; /* Align total price to the right */
         align-items: center;
-        text-align: left;
-        padding-top: 1rem;
-        border-top: 1px dashed var(--light-gray);
+        font-size: 1.1rem;
     }
     
     .mobile-label {
@@ -206,7 +319,14 @@
     }
     
     .item-quantity input {
-        width: 70px;
+        width: 50px;
+        padding: 0.4rem;
+        font-size: 0.9rem;
+    }
+    
+    .item-details .remove-btn {
+        margin-top: 0.25rem;
+        font-size: 0.85rem;
     }
 }
 </style>

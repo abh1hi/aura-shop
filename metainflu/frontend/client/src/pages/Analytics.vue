@@ -2,60 +2,71 @@
   <div class="page-container">
     <h1 class="page-title">Sales Analytics & Reports</h1>
 
-    <div class="stats-overview">
-      <div class="stat-card">
-        <p class="stat-label">Total Revenue (30 Days)</p>
-        <p class="stat-value text-green-600">$18,450.25</p>
-      </div>
-      <div class="stat-card">
-        <p class="stat-label">Units Sold (30 Days)</p>
-        <p class="stat-value">489</p>
-      </div>
-      <div class="stat-card">
-        <p class="stat-label">Average Order Value</p>
-        <p class="stat-value">$75.50</p>
-      </div>
+    <div v-if="isLoading" class="text-center py-10">
+        <p class="text-xl text-gray-500">Fetching live analytics data...</p>
     </div>
-    
-    <!-- Sales Chart Placeholder -->
-    <div class="chart-card">
-      <h2 class="section-subtitle">Monthly Sales Performance</h2>
-      <div class="chart-placeholder">
+    <div v-else-if="error" class="text-center py-10">
+        <p class="text-xl text-red-500">Error loading analytics: {{ error }}</p>
+    </div>
+    <div v-else>
+        <!-- STATS OVERVIEW -->
+        <div class="stats-overview">
+            <div class="stat-card">
+                <p class="stat-label">Total Revenue (30 Days)</p>
+                <p class="stat-value text-green-600">${{ stats.totalRevenue.toFixed(2) }}</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Units Sold (30 Days)</p>
+                <p class="stat-value">{{ stats.unitsSold }}</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Total Orders Handled</p>
+                <p class="stat-value">{{ stats.totalOrders }}</p>
+            </div>
+        </div>
         
-        <p class="text-gray-500 mt-4">Actual chart implementation (using Chart.js/D3) would go here, displaying revenue trends over the last 6 months.</p>
-      </div>
-    </div>
-
-    <!-- Top Products/Commissions -->
-    <div class="grid-2-col">
-        <div class="table-card">
-            <h2 class="section-subtitle">Top Selling Products</h2>
-             <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Units Sold</th>
-                            <th>Revenue</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="product in topProducts" :key="product.id">
-                            <td>{{ product.name }}</td>
-                            <td>{{ product.units }}</td>
-                            <td>${{ product.revenue.toFixed(2) }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+        <!-- Sales Chart Placeholder (Placeholder remains until chart library integration) -->
+        <div class="chart-card">
+            <h2 class="section-subtitle">Monthly Sales Performance</h2>
+            <div class="chart-placeholder">
+                <p class="text-gray-500 mt-4">Actual chart implementation (using Chart.js/D3) would go here, displaying revenue trends over time.</p>
             </div>
         </div>
 
-        <div class="table-card">
-            <h2 class="section-subtitle">Commission & Payouts</h2>
-            <div class="payout-info">
-                <p><strong>Next Payout:</strong> October 31, 2025</p>
-                <p><strong>Pending Commission:</strong> $1,845.03 (10% of Sales)</p>
-                <button class="cta-button">View Payout History</button>
+        <!-- Top Products/Commissions -->
+        <div class="grid-2-col">
+            <div class="table-card">
+                <h2 class="section-subtitle">Top Selling Products</h2>
+                 <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Units Sold</th>
+                                <th>Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="product in stats.topProducts" :key="product.id">
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.units }}</td>
+                                <td>${{ product.revenue.toFixed(2) }}</td>
+                            </tr>
+                            <tr v-if="stats.topProducts.length === 0">
+                                <td colspan="3" class="text-center text-gray-500 py-4">No sales data available.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-card">
+                <h2 class="section-subtitle">Commission & Payouts</h2>
+                <div class="payout-info">
+                    <p><strong>Next Payout:</strong> N/A</p>
+                    <p><strong>Pending Commission:</strong> ${{ (stats.totalRevenue * 0.1).toFixed(2) }} (10% of Sales)</p>
+                    <button class="cta-button">View Payout History</button>
+                </div>
             </div>
         </div>
     </div>
@@ -63,13 +74,43 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import vendorService from '../services/vendorService';
 
-const topProducts = ref([
-  { id: 1, name: 'Slim Denim Jeans', units: 150, revenue: 16500.00 },
-  { id: 2, name: 'Minimalist Tee', units: 120, revenue: 5400.00 },
-  { id: 3, name: 'Wool Coat', units: 80, revenue: 23920.00 },
-]);
+const stats = ref({
+    totalRevenue: 0,
+    unitsSold: 0,
+    totalOrders: 0,
+    topProducts: [],
+});
+const isLoading = ref(true);
+const error = ref(null);
+
+const fetchAnalyticsData = async () => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+        const data = await vendorService.getVendorDashboardStats();
+        
+        // Map the data structure from the API to the local state structure
+        stats.value = {
+            totalRevenue: data.totalRevenue || 0,
+            unitsSold: data.unitsSold || 0,
+            totalOrders: data.totalOrders || 0,
+            topProducts: data.topProducts || [],
+        };
+        
+    } catch (err) {
+        error.value = err.message;
+        console.error("Failed to fetch analytics:", err);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchAnalyticsData();
+});
 </script>
 
 <style scoped>

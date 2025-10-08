@@ -2,7 +2,7 @@
   File: metainflu/backend/server.js
   Purpose: The main entry point for the Node.js Express backend.
   It sets up middleware, connects to the database, and registers all API routes,
-  including the new admin routes.
+  including the new vendor routes.
 */
 const express = require('express');
 const dotenv = require('dotenv');
@@ -14,7 +14,8 @@ const productRoutes = require('./routes/productRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const cartRoutes = require('./routes/cartRoutes');
-const adminRoutes = require('./routes/adminRoutes'); // Import admin routes
+const adminRoutes = require('./routes/adminRoutes');
+const vendorRoutes = require('./routes/vendorRoutes'); // Import vendor routes
 
 const { errorHandler } = require('./middleware/errorMiddleware');
 const { protect } = require('./middleware/authMiddleware');
@@ -30,7 +31,8 @@ app.use(cors());
 app.use(express.json());
 
 // Database Connection
-mongoose.connect(mongoURI, {
+// NOTE: Make sure your MONGO_URI environment variable is set for the connection to succeed.
+mongoose.connect(mongoURI || 'mongodb://localhost:27017/aura-shop', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
@@ -46,7 +48,8 @@ app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
-app.use('/api/admin', adminRoutes); // Use admin routes
+app.use('/api/admin', adminRoutes); 
+app.use('/api/vendor', vendorRoutes); // Use new vendor routes
 
 // Test protected route
 app.get('/api/protected', protect, (req, res) => {
@@ -65,4 +68,3 @@ app.use(errorHandler);
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
-

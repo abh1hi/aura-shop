@@ -3,7 +3,10 @@ const router = express.Router();
 const orderController = require('../controllers/orderController');
 const { protect } = require('../middleware/authMiddleware');
 
-// Get all orders for a user
+// Get all orders for the authenticated user
+router.get('/myorders', protect, orderController.getMyOrders);
+
+// Get all orders (Admin/Vendor only - handled in controller)
 router.get('/', protect, orderController.getOrders);
 
 // Get a single order by ID

@@ -1,4 +1,3 @@
-<!-- File: src/views/Checkout.vue -->
 <template>
     <div>
         <section class="page-header">
@@ -8,53 +7,199 @@
         </section>
 
         <section class="section container">
-            <div class="checkout-layout">
+            <div v-if="isLoading" class="text-center py-10">
+                <p class="text-xl text-gray-500">Preparing checkout...</p>
+            </div>
+            <div v-else-if="error" class="text-center py-10">
+                <p class="text-xl text-red-500">Error: {{ error }}</p>
+                <router-link to="/cart" class="cta-button mt-4">Return to Cart</router-link>
+            </div>
+            <div v-else class="checkout-layout">
                 <div class="checkout-form">
                     <section>
                         <h2>Shipping Information</h2>
-                        <form>
+                        <form @submit.prevent>
                             <div class="form-group">
                                 <label for="name">Full Name</label>
-                                <input type="text" id="name">
+                                <input type="text" id="name" required v-model="formData.shippingAddress.fullName">
                             </div>
                             <div class="form-group">
                                 <label for="address">Address</label>
-                                <input type="text" id="address">
+                                <input type="text" id="address" required v-model="formData.shippingAddress.address">
                             </div>
-                            <!-- More address fields -->
+                            <div class="form-group grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="city">City</label>
+                                    <input type="text" id="city" required v-model="formData.shippingAddress.city">
+                                </div>
+                                <div>
+                                    <label for="postalCode">Postal Code</label>
+                                    <input type="text" id="postalCode" required v-model="formData.shippingAddress.postalCode">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="country">Country</label>
+                                <input type="text" id="country" required v-model="formData.shippingAddress.country">
+                            </div>
                         </form>
                     </section>
                     <section class="mt-8">
                         <h2>Payment Details</h2>
-                        <form>
+                        <form @submit.prevent>
                             <div class="form-group">
                                 <label for="card-number">Card Number</label>
-                                <input type="text" id="card-number">
+                                <input type="text" id="card-number" required v-model="formData.paymentDetails.cardNumber">
                             </div>
-                            <!-- More payment fields -->
+                            <div class="form-group">
+                                <label for="paymentMethod">Payment Method</label>
+                                <select id="paymentMethod" required v-model="formData.paymentDetails.paymentMethod">
+                                    <option value="">Select Method</option>
+                                    <option value="Card">Credit Card</option>
+                                    <option value="PayPal">PayPal</option>
+                                </select>
+                            </div>
+                            <!-- More payment fields (omitted for brevity) -->
                         </form>
                     </section>
+                    <div v-if="orderError" class="mt-4 text-red-500 font-semibold">{{ orderError }}</div>
                 </div>
+                
+                <!-- Order Summary (Now using cart data) -->
                 <aside class="order-summary">
                     <h2>Order Summary</h2>
+                    <div class="item-list">
+                        <div v-for="item in cartItems" :key="item.product._id" class="item-summary-row">
+                            <span>{{ item.product.name }} (x{{ item.quantity }})</span>
+                            <span>${{ (item.product.price * item.quantity).toFixed(2) }}</span>
+                        </div>
+                    </div>
                     <div class="summary-row">
                         <span>Subtotal</span>
-                        <span>$205.00</span>
+                        <span>${{ cartTotal.subtotal.toFixed(2) }}</span>
                     </div>
                     <div class="summary-row">
                         <span>Shipping</span>
-                        <span>$10.00</span>
+                        <span>${{ cartTotal.shipping.toFixed(2) }}</span>
                     </div>
                     <div class="summary-row total">
                         <span>Total</span>
-                        <span>$215.00</span>
+                        <span>${{ cartTotal.total.toFixed(2) }}</span>
                     </div>
-                    <button class="place-order-btn">Place Order</button>
+                    <button @click="placeOrder" :disabled="isPlacingOrder" class="place-order-btn">
+                        {{ isPlacingOrder ? 'Processing...' : 'Place Order' }}
+                    </button>
                 </aside>
             </div>
         </section>
     </div>
 </template>
+
+<script setup>
+import { ref, onMounted, computed } from 'vue';
+import cartService from '../services/cartService';
+import orderService from '../services/orderService';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const cartItems = ref([]);
+const isLoading = ref(true);
+const error = ref(null);
+
+const isPlacingOrder = ref(false);
+const orderError = ref(null);
+
+const formData = ref({
+    shippingAddress: {
+        fullName: 'Jane Doe',
+        address: '123 Main St',
+        city: 'New York',
+        postalCode: '10001',
+        country: 'USA',
+    },
+    paymentDetails: {
+        paymentMethod: 'Card',
+        cardNumber: '**** **** **** 1234'
+    }
+});
+
+
+// --- Data Fetching ---
+const fetchCart = async () => {
+    isLoading.value = true;
+    try {
+        const data = await cartService.getCart();
+        cartItems.value = data.items || [];
+        if (cartItems.value.length === 0) {
+            error.value = "Your cart is empty. Please add items to proceed.";
+        }
+    } catch (err) {
+        error.value = 'Failed to load cart: ' + err.message;
+        console.error('Fetch Cart Error:', err);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// --- Calculations ---
+const cartTotal = computed(() => {
+    const subtotal = cartItems.value.reduce((acc, item) => {
+        const price = item.product?.price || 0;
+        const quantity = item.quantity || 0;
+        return acc + (price * quantity);
+    }, 0);
+    
+    const shipping = subtotal > 100 ? 0 : 10.00;
+    const total = subtotal + shipping;
+    
+    return { subtotal, shipping, total };
+});
+
+// --- Actions ---
+const placeOrder = async () => {
+    if (cartItems.value.length === 0) {
+        orderError.value = "Cannot place order: Cart is empty.";
+        return;
+    }
+    
+    orderError.value = null;
+    isPlacingOrder.value = true;
+    
+    try {
+        const orderSummary = {
+            orderItems: cartItems.value,
+            subtotal: cartTotal.value.subtotal,
+            shippingCost: cartTotal.value.shipping,
+            total: cartTotal.value.total,
+        };
+        
+        const payload = {
+            shippingAddress: formData.value.shippingAddress,
+            paymentMethod: formData.value.paymentDetails.paymentMethod,
+            // These totals are passed to the backend, but the backend recalculates them.
+            // Sending them here helps ensure data consistency.
+            subtotal: orderSummary.subtotal,
+            shippingCost: orderSummary.shippingCost,
+            total: orderSummary.total,
+        };
+
+        const newOrder = await orderService.createOrder(payload);
+        
+        // Success: Navigate to confirmation page
+        router.push({ name: 'OrderPlaced', query: { orderId: newOrder._id } });
+        
+    } catch (err) {
+        orderError.value = 'Failed to place order: ' + (err.message || 'Unknown error');
+        console.error('Place Order Error:', err);
+    } finally {
+        isPlacingOrder.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchCart();
+});
+</script>
 
 <style scoped>
 .checkout-layout {
@@ -81,13 +226,14 @@
     margin-bottom: 0.5rem;
 }
 
-.form-group input {
+.form-group input, .form-group select {
     width: 100%;
     padding: 1rem;
     border: 1px solid #ccc;
     border-radius: 8px;
     font-size: 1rem;
     box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
 }
 
 .order-summary {
@@ -103,6 +249,20 @@
     font-size: 2rem;
     margin-bottom: 2rem;
     text-align: center;
+}
+
+.item-list {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px dashed var(--light-gray);
+}
+
+.item-summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 0.5rem;
 }
 
 .summary-row {
@@ -129,6 +289,10 @@
     font-size: 1.2rem;
     cursor: pointer;
     margin-top: 1rem;
+}
+.place-order-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
 }
 
 @media (max-width: 992px) {
