@@ -13,14 +13,16 @@ import OrderPlaced from '../pages/OrderPlaced.vue';
 import CustomerService from '../pages/CustopmerService.vue';
 import LiveChat from '../pages/LiveChat.vue';
 import Shop from '../pages/Shop.vue';
+import ProductDetail from '../pages/ProductDetail.vue';
+
 
 // Import Vendor Pages
 import VendorPanelLayout from '../layouts/VendorPanelLayout.vue';
 import VendorPanel from '../pages/VendorPanel.vue';
-import AddProduct from '../pages/AddProduct.vue'; // <-- Re-added this component
-import ManageProducts from '../pages/ManageProducts.vue'; // <-- Existing
-import OrderFulfillment from '../pages/OrderFulfillment.vue'; // <-- Existing
-import Analytics from '../pages/Analytics.vue'; // <-- Existing
+import AddProduct from '../pages/AddProduct.vue';
+import ManageProducts from '../pages/ManageProducts.vue';
+import OrderFulfillment from '../pages/OrderFulfillment.vue';
+import Analytics from '../pages/Analytics.vue';
 import Returns from '../pages/Returns.vue';
 import Invoices from '../pages/Invoices.vue';
 import ViewSales from '../pages/ViewSales.vue';
@@ -31,6 +33,11 @@ const routes = [
     path: '/',
     name: 'Home',
     component: Home,
+  },
+    {
+    path: '/product/:id',
+    name: 'ProductDetail',
+    component: ProductDetail,
   },
   {
     path: '/shop',
@@ -105,21 +112,18 @@ const routes = [
         name: 'VendorPanel',
         component: VendorPanel,
       },
-      // --- New/Updated Routes for Vendor Features ---
       {
-        // New route for product listing page
-        path: 'manage-products',
+        path: 'products',
         name: 'ManageProducts',
         component: ManageProducts,
       },
       {
-        // Dedicated route for the Add Product form
-        path: 'add-product',
+        path: 'products/add',
         name: 'AddProduct',
         component: AddProduct,
       },
       {
-        path: 'order-fulfillment',
+        path: 'orders',
         name: 'OrderFulfillment',
         component: OrderFulfillment,
       },
@@ -128,29 +132,18 @@ const routes = [
         name: 'Analytics',
         component: Analytics,
       },
-      // Redirection/Cleanup of old routes to the new, richer pages
       {
-        path: 'view-sales',
-        redirect: { name: 'OrderFulfillment' },
+        path: 'returns',
+        name: 'Returns',
+        component: Returns,
       },
       {
         path: 'invoices',
-        redirect: { name: 'Analytics' },
-      },
-      {
-        path: 'returns',
-        redirect: { name: 'OrderFulfillment' },
-      },
-      {
-        // Catch-all redirect for outdated /add-product links from the sidebar/navbar
-        path: 'add-product-old',
-        redirect: { name: 'AddProduct' },
+        name: 'Invoices',
+        component: Invoices,
       },
     ],
   },
-  // The warnings about missing routes like /sustainability, /faq, and /shipping are due
-  // to hardcoded links in Footer/Header that don't match router paths.
-  // We should add stub routes or update the external links.
 ];
 const router = createRouter({
   history: createWebHistory(),

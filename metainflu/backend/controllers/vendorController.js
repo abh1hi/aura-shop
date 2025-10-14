@@ -13,57 +13,88 @@ const User = require('../models/User');
 /**
  * Calculates dashboard statistics (Sales, Orders, Returns).
  * @param {object} vendorId - The ID of the currently logged-in vendor.
+ * @param {number} days - The number of days to filter the data by.
  * @returns {object} - Statistics object.
  */
-const getDashboardStats = asyncHandler(async (vendorId) => {
-  // 1. Get all products owned by the vendor
-  const vendorProducts = await Product.find({ user: vendorId }).select('_id');
+// @desc    Get vendor dashboard stats
+// @route   GET /api/vendor/dashboard/stats
+// @access  Private/Vendor
+const getVendorDashboardStats = asyncHandler(async (req, res) => {
+  const vendorId = req.user._id;
+  const { days } = req.query;
+
+  // 1. Get all products for the vendor
+  const vendorProducts = await Product.find({ user: vendorId });
   const vendorProductIds = vendorProducts.map(p => p._id);
 
-  // 2. Find orders that contain at least one of the vendor's products
-  const vendorOrders = await Order.find({
+  // 2. Define date filter for orders
+  const dateFilter = {};
+  if (days) {
+    const date = new Date();
+    date.setDate(date.getDate() - parseInt(days));
+    dateFilter.createdAt = { $gte: date };
+  }
+
+  // 3. Find all orders containing the vendor's products within the date range
+  const orders = await Order.find({
     'items.product': { $in: vendorProductIds },
-  });
+    ...dateFilter,
+  }).populate('items.product');
 
-  const totalOrders = vendorOrders.length;
   let totalRevenue = 0;
-  let newOrdersCount = 0; // Assuming 'pending' is new
+  let unitsSold = 0;
+  const productSales = {}; // To track sales per product
+  const salesByDate = {}; // To track sales per day for the chart
 
-  vendorOrders.forEach(order => {
-    // Only calculate revenue based on the vendor's products within the order
+  orders.forEach(order => {
     order.items.forEach(item => {
-      if (vendorProductIds.includes(item.product.toString())) {
-        // Simple approximation: assuming item price is proportional to total price.
-        // For accurate revenue, a line item schema with unit price is needed.
-        // For now, we'll just sum the whole order total for a simple count/sum.
-        // NOTE: In a real e-commerce system, this calculation is much more complex!
-        totalRevenue += order.total;
+      // Ensure the product belongs to the vendor and is populated
+      if (item.product && vendorProductIds.some(id => id.equals(item.product._id))) {
+        const revenue = item.quantity * item.product.price;
+        totalRevenue += revenue;
+        unitsSold += item.quantity;
+
+        // Aggregate product sales
+        if (!productSales[item.product._id]) {
+          productSales[item.product._id] = {
+            id: item.product._id,
+            name: item.product.name,
+            units: 0,
+            revenue: 0,
+          };
+        }
+        productSales[item.product._id].units += item.quantity;
+        productSales[item.product._id].revenue += revenue;
+
+        // Aggregate sales by date for the chart
+        const orderDate = order.createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
+        if (!salesByDate[orderDate]) {
+          salesByDate[orderDate] = 0;
+        }
+        salesByDate[orderDate] += revenue;
       }
     });
-
-    if (order.status === 'pending') {
-      newOrdersCount++;
-    }
   });
-  
-  // Mock logic for pending returns, as Order model doesn't explicitly track returns yet
-  const pendingReturns = 2; // Mock data for now
 
-  return {
-    totalSales: totalRevenue, // Should be calculated revenue from vendor items
-    totalOrders: totalOrders,
-    newOrders: newOrdersCount,
-    pendingReturns: pendingReturns,
+  // 4. Format top products
+  const topProducts = Object.values(productSales)
+    .sort((a, b) => b.units - a.units) // Sort by units sold
+    .slice(0, 10); // Get top 10
+
+  // 5. Format sales data for the chart
+  const sortedDates = Object.keys(salesByDate).sort();
+  const salesData = {
+    labels: sortedDates,
+    data: sortedDates.map(date => salesByDate[date]),
   };
-});
 
-
-// @desc    Get vendor dashboard stats
-// @route   GET /api/vendor/dashboard
-// @access  Private/Vendor
-const getVendorDashboard = asyncHandler(async (req, res) => {
-  const stats = await getDashboardStats(req.user._id);
-  res.json(stats);
+  res.json({
+    totalRevenue,
+    unitsSold,
+    totalOrders: orders.length,
+    topProducts,
+    salesData,
+  });
 });
 
 // @desc    Get all products created by the logged-in vendor
@@ -139,7 +170,7 @@ const updateOrderItemToShipped = asyncHandler(async (req, res) => {
 
 
 module.exports = {
-  getVendorDashboard,
+  getVendorDashboardStats,
   getVendorProducts,
   getVendorOrders,
   updateOrderItemToShipped,

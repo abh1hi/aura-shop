@@ -1,238 +1,317 @@
-<!-- File: src/views/Home.vue -->
 <template>
-  <div>
+  <div class="home-page">
+    <!-- HERO -->
     <section class="hero">
+      <video autoplay muted loop playsinline class="hero-bg">
+       <source src="/videos/hero-fashion.mp4" type="video/mp4" />
+      </video>
+      <div class="overlay"></div>
       <div class="hero-content">
-        <h1>Discover Your Signature Style</h1>
-        <p>Minimalist designs, ethically crafted for the modern individual. Explore our new collection.</p>
-        <a href="#" class="cta-button">Shop Now</a>
+        <h1>Effortless. Elevated. <span class="brand-gradient">AURA.</span></h1>
+        <p>Luxury minimalism for the new generation — consciously crafted, timelessly styled.</p>
+        <a href="#" class="cta-button">Explore Collection</a>
+      </div>
+      <div class="scroll-indicator">Scroll ↓</div>
+    </section>
+
+    <!-- TRENDING COLLECTION -->
+    <section class="section trending">
+      <div class="container">
+        <div class="section-header">
+          <h2>New Drop: FW 2025</h2>
+          <a href="#" class="view-all">View All</a>
+        </div>
+        <div class="scroll-grid">
+          <ProductCard
+            v-for="product in trendingProducts"
+            :key="product.id"
+            :product="product"
+            class="scroll-item"
+          />
+        </div>
       </div>
     </section>
 
-    <section class="section container">
-      <h2 class="section-title">Featured Products</h2>
-      <div class="product-grid">
-        <ProductCard v-for="product in featuredProducts" :key="product.id" :product="product" />
+    <!-- SIGNATURE COLLECTION -->
+    <section class="signature-section">
+      <div class="signature-item left">
+        <img src="https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=1200" alt="">
+        <div class="signature-text">
+          <h3>The Modern Classic</h3>
+          <p>Structured silhouettes. Neutral palette. Subtle rebellion.</p>
+          <a href="#">Shop The Edit</a>
+        </div>
+      </div>
+      <div class="signature-item right">
+        <img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1200" alt="">
+        <div class="signature-text">
+          <h3>Street Luxury</h3>
+          <p>Urban aesthetic meets artisanal detail.</p>
+          <a href="#">Discover More</a>
+        </div>
       </div>
     </section>
 
-    <section class="section container">
-        <h2 class="section-title">Shop by Category</h2>
-        <div class="category-grid">
-            <a href="#" class="category-card">
-                <img src="https://images.unsplash.com/photo-1521577352947-3c47e345e909?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Tops">
-                <div class="category-overlay">
-                    <h3 class="category-title">Tops</h3>
-                </div>
-            </a>
-            <a href="#" class="category-card">
-                <img src="https://images.unsplash.com/photo-1541099649105-f69ad21f3246?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Bottoms">
-                <div class="category-overlay">
-                    <h3 class="category-title">Bottoms</h3>
-                </div>
-            </a>
-            <a href="#" class="category-card">
-                <img src="https://images.unsplash.com/photo-1551028719-00167b16e2a9?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Outerwear">
-                <div class="category-overlay">
-                    <h3 class="category-title">Outerwear</h3>
-                </div>
-            </a>
-        </div>
+    <!-- ETHICAL STATEMENT -->
+    <section class="ethos">
+      <div class="container">
+        <h2>Responsibly Designed. Consciously Worn.</h2>
+        <p>
+          MetaBerry stands for design integrity and ethical creation.
+          Every fabric, every thread, every silhouette — curated for the planet and you.
+        </p>
+      </div>
     </section>
 
-    <section class="section about-section">
-        <div class="container">
-            <h2 class="section-title">Ethical. Timeless. Yours.</h2>
-            <p>We believe in fashion that lasts. Our pieces are designed with intention, crafted from high-quality, sustainable materials, and made to be cherished for years to come. Join us in building a more mindful wardrobe.</p>
-            <a href="#" class="cta-button">Learn More About Us</a>
-        </div>
+    <!-- MOODBOARD / COMMUNITY -->
+    <section class="moodboard">
+      <h2>#MetaMood</h2>
+      <div class="mood-grid">
+        <img v-for="n in 6" :key="n" :src="`https://source.unsplash.com/random/800x800?fashion,${n}`" />
+      </div>
     </section>
 
+    <!-- NEWSLETTER -->
+    <section class="newsletter">
+      <div class="container">
+        <h2>Join the Collective</h2>
+        <p>Be first to know about new drops, limited edits, and exclusive perks.</p>
+        <form class="newsletter-form">
+          <input type="email" placeholder="Enter your email" />
+          <button type="submit">Join Now</button>
+        </form>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import ProductCard from '../components/ProductCard.vue';
+import { ref } from 'vue'
+import ProductCard from '../components/ProductCard.vue'
 
-const featuredProducts = ref([
-  { id: 1, name: 'Classic Linen Shirt', price: 85.00, imageUrl: 'https://images.unsplash.com/photo-1584273142342-294256955942?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: 2, name: 'Slim-Fit Denim', price: 120.00, imageUrl: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: 3, name: 'Merino Wool Sweater', price: 150.00, imageUrl: 'https://images.unsplash.com/photo-1551028719-00167b16e2a9?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: 4, name: 'Graphic Tee', price: 39.99, imageUrl: 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-]);
+const trendingProducts = ref([
+  { id: 1, name: 'Wool Oversized Coat', price: 190, imageUrl: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?q=80&w=1887' },
+  { id: 2, name: 'Ribbed Knit Set', price: 140, imageUrl: 'https://images.unsplash.com/photo-1592878895601-fd4fdde3435a?q=80&w=1887' },
+  { id: 3, name: 'Neutral Cargo Pants', price: 99, imageUrl: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1887' },
+  { id: 4, name: 'Luxe Graphic Tee', price: 59, imageUrl: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?q=80&w=1887' }
+])
 </script>
 
 <style scoped>
+:root {
+  --primary: #111;
+  --accent: #c19a6b;
+  --bg: #fafafa;
+}
+
+/* HERO */
 .hero {
-  height: 85vh;
-  background-image: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url('https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1920&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
-  background-size: cover;
-  background-position: center;
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  color: white;
+  color: #fff;
 }
-
-.hero-content h1 {
-  font-size: 4.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  text-shadow: 0 2px 15px rgba(0,0,0,0.3);
-}
-
-.hero-content p {
-  font-size: 1.3rem;
-  font-weight: 300;
-  margin-bottom: 2.5rem;
-  max-width: 600px;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-}
-
-.product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 2.5rem;
-}
-
-.product-card {
-  background-color: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-  position: relative;
-  border: 1px solid var(--light-gray);
-}
-
-.product-card:hover {
-  box-shadow: 0 14px 28px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.08);
-  transform: translateY(-8px);
-}
-
-.product-image-container {
-  position: relative;
-  overflow: hidden;
-}
-
-.product-card img {
+.hero-bg {
+  position: absolute;
   width: 100%;
-  height: 350px;
+  height: 100%;
   object-fit: cover;
-  display: block;
-  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  filter: brightness(55%);
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0,0,0,0.2), rgba(0,0,0,0.8));
+}
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 700px;
+  padding: 2rem;
+  animation: fadeInUp 1.2s ease;
+}
+.hero-content h1 {
+  font-size: 3.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 1.2rem;
+}
+.brand-gradient {
+  background: linear-gradient(90deg, #fff, #c19a6b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero-content p {
+  font-size: 1.2rem;
+  color: #ddd;
+  margin-bottom: 2.2rem;
+}
+.cta-button {
+  padding: 1rem 2.5rem;
+  border-radius: 30px;
+  background: #fff;
+  color: #000;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 0.3s;
+}
+.cta-button:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.scroll-indicator {
+  position: absolute;
+  bottom: 2rem;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  opacity: 0.7;
 }
 
-.product-card:hover img {
-  transform: scale(1.05);
+/* TRENDING SECTION */
+.section {
+  padding: 5rem 1rem;
+}
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+.scroll-grid {
+  display: flex;
+  overflow-x: auto;
+  gap: 2rem;
+  scroll-snap-type: x mandatory;
+}
+.scroll-item {
+  min-width: 300px;
+  scroll-snap-align: start;
+}
+.view-all {
+  text-decoration: none;
+  font-weight: 500;
+  color: var(--accent);
 }
 
-.product-info {
-  padding: 1.5rem;
+/* SIGNATURE COLLECTION */
+.signature-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 600px;
+}
+.signature-item {
+  position: relative;
+  overflow: hidden;
+}
+.signature-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.8s ease;
+}
+.signature-item:hover img {
+  transform: scale(1.1);
+}
+.signature-text {
+  position: absolute;
+  bottom: 60px;
+  left: 60px;
+  color: #fff;
+}
+.signature-text h3 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+.signature-text a {
+  color: #fff;
+  border-bottom: 1px solid #fff;
+  text-decoration: none;
+}
+
+/* ETHOS */
+.ethos {
+  background: var(--bg);
+  padding: 6rem 1rem;
   text-align: center;
 }
-
-.product-name {
-  font-size: 1.1rem;
-  font-weight: 500;
-  margin: 0 0 0.5rem 0;
-  color: var(--text-color);
+.ethos h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+.ethos p {
+  max-width: 700px;
+  margin: 0 auto;
+  color: #555;
 }
 
-.product-price {
-  font-size: 1.2rem;
+/* MOODBOARD */
+.moodboard {
+  padding: 5rem 1rem;
+  text-align: center;
+}
+.mood-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+.mood-grid img {
+  width: 100%;
+  border-radius: 12px;
+  transition: transform 0.4s ease;
+}
+.mood-grid img:hover {
+  transform: scale(1.03);
+}
+
+/* NEWSLETTER */
+.newsletter {
+  background: #111;
+  color: #fff;
+  text-align: center;
+  padding: 5rem 1rem;
+}
+.newsletter-form {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.newsletter-form input {
+  padding: 0.8rem 1.2rem;
+  border-radius: 30px;
+  border: none;
+  width: 280px;
+  outline: none;
+}
+.newsletter-form button {
+  background: var(--accent);
+  border: none;
+  border-radius: 30px;
+  padding: 0.8rem 1.5rem;
+  color: #fff;
   font-weight: 600;
-  color: var(--c5);
+  cursor: pointer;
+  transition: 0.3s;
+}
+.newsletter-form button:hover {
+  background: #b78859;
 }
 
-.category-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
+/* Animation */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
-.category-card {
-    position: relative;
-    overflow: hidden;
-    border-radius: 12px;
-    height: 400px;
-    text-decoration: none;
-}
-
-.category-card img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.4s;
-}
-
-.category-card:hover img {
-    transform: scale(1.1);
-}
-
-.category-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0));
-    display: flex;
-    align-items: flex-end;
-    padding: 2rem;
-    box-sizing: border-box;
-}
-
-.category-title {
-    color: white;
-    font-size: 2rem;
-    font-weight: 600;
-}
-
-.about-section {
-    background-color: var(--light-gray);
-    text-align: center;
-}
-
-.about-section h2 {
-    color: var(--text-color);
-}
-
-.about-section p {
-    max-width: 700px;
-    margin: 0 auto 2rem auto;
-    font-size: 1.1rem;
-    line-height: 1.8;
-}
-
 
 @media (max-width: 992px) {
-    .hero-content h1 {
-        font-size: 3.5rem;
-    }
-}
-
-@media (max-width: 768px) {
-    .product-grid,
-    .category-grid {
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    }
-
-    .hero-content h1 {
-        font-size: 3rem;
-    }
-
-    .hero-content p {
-        font-size: 1.1rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .product-grid,
-    .category-grid {
-        grid-template-columns: 1fr;
-    }
+  .signature-section {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
 }
 </style>
-

@@ -10,9 +10,9 @@ const { protect, vendor } = require('../middleware/authMiddleware');
 // All routes here require protection and a vendor role
 router.use(protect, vendor);
 
-// @route   GET /api/vendor/dashboard
+// @route   GET /api/vendor/dashboard/stats
 // @desc    Get dashboard statistics for the vendor
-router.get('/dashboard', vendorController.getVendorDashboard);
+router.get('/dashboard/stats', vendorController.getVendorDashboardStats);
 
 // @route   GET /api/vendor/products
 // @desc    Get all products uploaded by the vendor

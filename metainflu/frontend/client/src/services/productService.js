@@ -32,6 +32,22 @@ const getProducts = async (categoryId = null) => {
   }
 };
 
+const getProductById = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}${id}`);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch product');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch product:', error);
+    throw error;
+  }
+};
+
 export default {
   getProducts,
 };

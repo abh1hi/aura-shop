@@ -5,11 +5,23 @@
 */
 const express = require('express');
 const router = express.Router();
-const { getUsers } = require('../controllers/adminController');
+const {
+  getUsers,
+  getPendingCategories,
+  approveCategory,
+  rejectCategory,
+} = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
-// Defines a GET route to fetch all users, protected by authentication and admin role checks.
-router.route('/users').get(protect, admin, getUsers);
+// All routes in this file are protected by admin middleware
+router.use(protect, admin);
+
+// User management
+router.route('/users').get(getUsers);
+
+// Category management
+router.route('/categories/pending').get(getPendingCategories);
+router.route('/categories/:id/approve').put(approveCategory);
+router.route('/categories/:id').delete(rejectCategory); // Using DELETE to reject/delete
 
 module.exports = router;
-

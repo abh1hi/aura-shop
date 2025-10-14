@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const Category = require('../models/Category');
 const asyncHandler = require('express-async-handler');
 
 // @desc    Fetch all products
@@ -25,23 +26,51 @@ const getProductById = asyncHandler(async (req, res) => {
 
 // @desc    Create a product
 // @route   POST /api/products
-// @access  Private/Admin (or Vendor who is protected by admin or vendor middleware)
+// @access  Private/Vendor
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, price, description, imageUrl, category } = req.body;
-  
-  // NOTE: This endpoint is currently protected by `protect, admin` middleware in productRoutes.js.
-  // For simplicity, we assume this is the admin endpoint for now.
-  // If we want vendors to use this, the route protection should be updated, and we must ensure
-  // the `user` field is set to the currently logged-in user (req.user._id).
-  
-  // For the purpose of enabling the Vendor Panel, we enforce the owner to be the logged-in user.
+  const { name, price, description, imageUrl, stock, category: categoryId, newCategoryName } = req.body;
+
+  let category;
+
+  if (newCategoryName) {
+    // Vendor is proposing a new category
+    // Check if it already exists (case-insensitive)
+    const existingCategory = await Category.findOne({ name: { $regex: new RegExp(`^${newCategoryName}$`, 'i') } });
+
+    if (existingCategory) {
+      // If it exists, use it, but we might want to check its status
+      if (existingCategory.status === 'approved') {
+        category = existingCategory._id;
+      } else {
+        // If it's pending, we can either use it or throw an error
+        // For now, let's use it, the product will be tied to a pending category
+        category = existingCategory._id;
+      }
+    } else {
+      // If it doesn't exist, create it with a 'pending' status
+      const newCategory = new Category({
+        name: newCategoryName,
+        status: 'pending',
+      });
+      const createdCategory = await newCategory.save();
+      category = createdCategory._id;
+    }
+  } else if (categoryId) {
+    // Vendor selected an existing category
+    category = categoryId;
+  } else {
+    res.status(400);
+    throw new Error('Please provide a category for the product.');
+  }
+
   const product = new Product({
     name,
     price,
     description,
     imageUrl,
     category,
-    user: req.user._id, // Assign the logged-in user (vendor/admin) as the product owner
+    stock,
+    user: req.user._id,
   });
 
   const createdProduct = await product.save();

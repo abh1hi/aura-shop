@@ -28,6 +28,13 @@
         </svg>
         <span>Products</span>
       </router-link>
+      <!-- Link to Categories Management -->
+      <router-link to="/categories" class="flex items-center space-x-2 p-3 rounded-md hover:bg-gray-700 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+        </svg>
+        <span>Categories</span>
+      </router-link>
       <!-- Link to Campaigns Management -->
       <router-link to="/campaigns" class="flex items-center space-x-2 p-3 rounded-md hover:bg-gray-700 transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

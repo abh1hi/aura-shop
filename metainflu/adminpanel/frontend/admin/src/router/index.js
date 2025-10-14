@@ -10,6 +10,8 @@ import AdminProducts from '../pages/AdminProducts.vue';
 import AdminCampaigns from '../pages/AdminCampaigns.vue';
 import AdminPayments from '../pages/AdminPayments.vue';
 import AdminLogin from '../pages/AdminLogin.vue';
+import AdminCategories from '../pages/AdminCategories.vue';
+
 const routes = [
   {
     path: '/',
@@ -32,6 +34,11 @@ const routes = [
     component: AdminProducts,
   },
   {
+    path: '/categories',
+    name: 'AdminCategories',
+    component: AdminCategories,
+  },
+  {
     path: '/campaigns',
     name: 'AdminCampaigns',
     component: AdminCampaigns,
@@ -49,4 +56,3 @@ const router = createRouter({
 });
 
 export default router;
-

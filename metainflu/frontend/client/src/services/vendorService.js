@@ -37,11 +37,18 @@ const getAuthHeaders = () => {
 
 /**
  * Fetches vendor-specific dashboard statistics.
+ * @param {object} params - Query parameters for filtering.
  * @returns {Promise<object>} Dashboard stats.
  */
-const getVendorDashboardStats = async () => {
+const getVendorDashboardStats = async (params) => {
   try {
-    const response = await fetch(API_BASE_URL + 'vendor/dashboard/stats', {
+    let url = API_BASE_URL + 'vendor/dashboard/stats';
+    if (params) {
+      const query = new URLSearchParams(params).toString();
+      url += `?${query}`;
+    }
+
+    const response = await fetch(url, {
       headers: getAuthHeaders(),
     });
 

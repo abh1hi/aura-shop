@@ -6,22 +6,36 @@
 
 const API_URL = 'http://localhost:5000/api/';
 
+// Helper function to retrieve the admin token from localStorage.
+const getToken = () => {
+  const adminUser = localStorage.getItem('adminUser');
+  if (adminUser) {
+    return JSON.parse(adminUser).token;
+  }
+  return null;
+};
+
 // Helper function to create authentication headers.
-const getAuthHeaders = (token) => ({
+const getAuthHeaders = () => {
+  const token = getToken();
+  // Although we check for a token, we don't throw an error here.
+  // This allows the API to handle unauthorized requests gracefully,
+  // which is better for centralized error handling in the UI.
+  return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`,
-});
+  };
+};
 
 /**
  * Fetches all users from the backend (admin only).
  * Requires a valid admin JWT token for authorization.
- * @param {string} token - The admin user's JWT token.
  * @returns {Promise<Array>} - A promise that resolves with an array of user objects.
  */
-const getUsers = async (token) => {
+const getUsers = async () => {
   try {
     const response = await fetch(API_URL + 'admin/users', {
-      headers: getAuthHeaders(token),
+      headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -60,14 +74,13 @@ const getProducts = async () => {
  * Creates a new product (admin only).
  * Requires a valid admin JWT token for authorization.
  * @param {object} productData - The data for the new product (name, description, price, imageUrl).
- * @param {string} token - The admin user's JWT token.
  * @returns {Promise<object>} - A promise that resolves with the newly created product object.
  */
-const createProduct = async (productData, token) => {
+const createProduct = async (productData) => {
   try {
     const response = await fetch(API_URL + 'products', {
       method: 'POST',
-      headers: getAuthHeaders(token),
+      headers: getAuthHeaders(),
       body: JSON.stringify(productData),
     });
 
@@ -83,10 +96,75 @@ const createProduct = async (productData, token) => {
   }
 };
 
+/**
+ * Fetches categories pending approval (admin only).
+ * @returns {Promise<Array>} - A promise resolving to an array of pending categories.
+ */
+const getPendingCategories = async () => {
+  try {
+      const response = await fetch(`${API_URL}admin/categories/pending`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch pending categories');
+      }
+      return response.json();
+  } catch (error) {
+      console.error('Failed to fetch pending categories:', error);
+      throw error;
+  }
+};
+
+/**
+ * Approves a category (admin only).
+ * @param {string} id - The ID of the category to approve.
+ * @returns {Promise<object>} - A promise resolving to the approved category.
+ */
+const approveCategory = async (id) => {
+    try {
+        const response = await fetch(`${API_URL}admin/categories/${id}/approve`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to approve category');
+        }
+        return response.json();
+    } catch (error) {
+        console.error('Failed to approve category:', error);
+        throw error;
+    }
+};
+
+/**
+ * Rejects (deletes) a category (admin only).
+ * @param {string} id - The ID of the category to reject.
+ * @returns {Promise<object>} - A promise resolving to a confirmation message.
+ */
+const rejectCategory = async (id) => {
+    try {
+        const response = await fetch(`${API_URL}admin/categories/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to reject category');
+        }
+        return response.json();
+    } catch (error) {
+        console.error('Failed to reject category:', error);
+        throw error;
+    }
+};
 
 export default {
   getUsers,
   getProducts,
   createProduct,
+  getPendingCategories,
+  approveCategory,
+  rejectCategory,
 };
-
