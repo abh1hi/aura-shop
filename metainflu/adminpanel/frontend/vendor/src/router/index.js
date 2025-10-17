@@ -5,10 +5,11 @@
 */
 
 import { createRouter, createWebHistory } from 'vue-router';
-import { authService } from '../services/authService.js';
+import authService from '../services/authService.js';
 
 // Import page components
 import VendorPanel from '../pages/VendorPanel.vue';
+import VendorLanding from '../pages/VendorLanding.vue';
 import Analytics from '../pages/Analytics.vue';
 import ManageProducts from '../pages/ManageProducts.vue';
 import AddProduct from '../pages/AddProduct.vue';
@@ -20,6 +21,16 @@ import Account from '../pages/Account.vue';
 
 // Define routes
 const routes = [
+  {
+    path: '/landing',
+    name: 'VendorLanding',
+    component: VendorLanding,
+    meta: { 
+      title: 'Join Aura Shop - Vendor Platform',
+      requiresAuth: false,
+      hideNavigation: true
+    }
+  },
   {
     path: '/',
     name: 'Dashboard',
@@ -116,9 +127,29 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../components/LoginForm.vue'),
+    component: () => import('../components/VendorLogin.vue'),
     meta: { 
-      title: 'Login',
+      title: 'Vendor Login',
+      requiresAuth: false,
+      hideNavigation: true
+    }
+  },
+  {
+    path: '/register',
+    name: 'VendorRegister',
+    component: () => import('../components/VendorRegister.vue'),
+    meta: { 
+      title: 'Vendor Registration',
+      requiresAuth: false,
+      hideNavigation: true
+    }
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../components/ForgotPassword.vue'),
+    meta: { 
+      title: 'Forgot Password',
       requiresAuth: false,
       hideNavigation: true
     }
@@ -154,32 +185,56 @@ router.beforeEach(async (to, from, next) => {
   
   // Check authentication requirement
   if (to.meta.requiresAuth) {
-    const isAuthenticated = await authService.isAuthenticated();
-    const isVendor = await authService.isVendor();
-    
-    if (!isAuthenticated) {
-      // Redirect to login if not authenticated
-      next({ 
-        name: 'Login', 
-        query: { redirect: to.fullPath } 
-      });
-      return;
-    }
-    
-    if (!isVendor) {
-      // Redirect to unauthorized page if not a vendor
-      next({ 
-        name: 'Unauthorized'
-      });
+    try {
+      const isAuthenticated = await authService.isAuthenticated();
+      const isVendor = await authService.isVendor();
+      
+      if (!isAuthenticated) {
+        // Redirect to login if not authenticated
+        next({ 
+          name: 'Login', 
+          query: { redirect: to.fullPath } 
+        });
+        return;
+      }
+      
+      if (!isVendor) {
+        // Redirect to landing page if not a vendor
+        next({ 
+          name: 'VendorLanding'
+        });
+        return;
+      }
+    } catch (error) {
+      console.error('Authentication check failed:', error);
+      next({ name: 'Login' });
       return;
     }
   }
   
-  // Redirect authenticated users away from login page
-  if (to.name === 'Login') {
-    const isAuthenticated = await authService.isAuthenticated();
-    if (isAuthenticated) {
-      next({ name: 'Dashboard' });
+  // Redirect authenticated users away from auth pages
+  if (['Login', 'VendorRegister', 'VendorLanding'].includes(to.name)) {
+    try {
+      const isAuthenticated = await authService.isAuthenticated();
+      if (isAuthenticated) {
+        next({ name: 'Dashboard' });
+        return;
+      }
+    } catch (error) {
+      // If auth check fails, allow access to auth pages
+    }
+  }
+  
+  // Redirect root path to landing for non-authenticated users
+  if (to.path === '/' && to.name === 'Dashboard') {
+    try {
+      const isAuthenticated = await authService.isAuthenticated();
+      if (!isAuthenticated) {
+        next({ name: 'VendorLanding' });
+        return;
+      }
+    } catch (error) {
+      next({ name: 'VendorLanding' });
       return;
     }
   }
