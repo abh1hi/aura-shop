@@ -15,24 +15,53 @@
           </div>
         </div>
       </div>
+      <p v-if="error" class="text-sm text-red-600 mt-3">{{ error }}</p>
     </div>
   </div>
 </template>
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '../services/api'
 
 const products = ref([])
+const error = ref('')
+const router = useRouter()
 
 onMounted(load)
 
 async function load(){
-  // vendor-specific: backend should guard /api/vendor/products
-  const { data } = await api.get('/vendor/products')
-  products.value = data || []
+  error.value = ''
+  try {
+    const { data } = await api.get('/vendor/products')
+    products.value = data || []
+  } catch (err) {
+    if (err?.response?.status === 401) {
+      error.value = 'Unauthorized. Please sign in with a vendor account.'
+      alert(error.value)
+      router.push({ name: 'login' })
+    } else {
+      console.error(err)
+      error.value = 'Failed to load products.'
+    }
+  }
 }
 
 function openNew(){ /* show modal (future) */ }
 function edit(p){ /* route to edit (future) */ }
-async function remove(p){ if(confirm('Delete?')) { await api.delete(`/vendor/products/${p._id}`); await load(); } }
+async function remove(p){ 
+  if(confirm('Delete?')) { 
+    try {
+      await api.delete(`/vendor/products/${p._id}`)
+      await load() 
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        alert('Unauthorized. Please sign in with a vendor account.')
+        router.push({ name: 'login' })
+      } else {
+        alert('Failed to delete product.')
+      }
+    }
+  } 
+}
 </script>
