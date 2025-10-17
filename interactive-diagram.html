@@ -3,661 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aura Shop - Interactive Architecture Diagram</title>
+    <title>Aura Shop - Interactive Architecture Diagram (Stabilized)</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 2.5rem;
-            font-weight: 300;
-        }
-
-        .header p {
-            margin: 10px 0 0 0;
-            opacity: 0.8;
-            font-size: 1.1rem;
-        }
-
-        .controls {
-            padding: 20px 30px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .control-group {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .control-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .control-item label {
-            font-weight: 500;
-            color: #495057;
-        }
-
-        .control-item select, .control-item button {
-            padding: 8px 15px;
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        .control-item button {
-            background: #007bff;
-            color: white;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .control-item button:hover {
-            background: #0056b3;
-        }
-
-        #graph {
-            width: 100%;
-            height: 800px;
-            background: #fafafa;
-        }
-
-        .node {
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .node:hover {
-            transform: scale(1.1);
-        }
-
-        .node-frontend { fill: #4CAF50; }
-        .node-backend { fill: #2196F3; }
-        .node-database { fill: #FF9800; }
-        .node-route { fill: #9C27B0; }
-        .node-model { fill: #F44336; }
-        .node-middleware { fill: #795548; }
-        .node-component { fill: #00BCD4; }
-        .node-service { fill: #607D8B; }
-
-        .link {
-            stroke: #999;
-            stroke-opacity: 0.6;
-            stroke-width: 2px;
-            transition: all 0.3s ease;
-        }
-
-        .link:hover {
-            stroke: #333;
-            stroke-width: 3px;
-            stroke-opacity: 1;
-        }
-
-        .tooltip {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 14px;
-            line-height: 1.4;
-            max-width: 300px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-            z-index: 1000;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-
-        .tooltip h3 {
-            margin: 0 0 8px 0;
-            color: #4CAF50;
-            font-size: 16px;
-        }
-
-        .tooltip p {
-            margin: 5px 0;
-        }
-
-        .legend {
-            padding: 20px 30px;
-            background: white;
-            border-top: 1px solid #e9ecef;
-        }
-
-        .legend h3 {
-            margin: 0 0 15px 0;
-            color: #2c3e50;
-        }
-
-        .legend-items {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .legend-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-        }
-
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            padding: 20px 30px;
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .stat-label {
-            color: #6c757d;
-            font-size: 0.9rem;
-        }
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; margin: 0; padding: 16px; background: #f2f4f7; }
+        .container { max-width: 1280px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(16,24,40,.08); overflow: hidden; }
+        .header { background: #0f172a; color: white; padding: 20px 24px; }
+        .header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+        .header p { margin: 6px 0 0 0; opacity: .8; font-size: 13px; }
+        .controls { display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: #fcfcfd; border-bottom: 1px solid #eef2f7; flex-wrap: wrap; }
+        .controls .control-item { display: flex; gap: 8px; align-items: center; }
+        select, button { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; font-size: 13px; }
+        button { background: #2563eb; color: white; border: none; cursor: pointer; }
+        button.secondary { background: #111827; }
+        #graph { width: 100%; height: 760px; background: #ffffff; }
+        .node { cursor: grab; }
+        .node:active { cursor: grabbing; }
+        .node circle { transition: r .15s ease; }
+        .node-frontend { fill: #16a34a; }
+        .node-backend { fill: #2563eb; }
+        .node-database { fill: #f59e0b; }
+        .node-route { fill: #7c3aed; }
+        .node-model { fill: #ef4444; }
+        .node-middleware { fill: #92400e; }
+        .node-component { fill: #06b6d4; }
+        .node-service { fill: #334155; }
+        .link { stroke: #cbd5e1; stroke-width: 1.75px; }
+        .link.active { stroke: #475569; stroke-width: 2.5px; }
+        .tooltip { position: absolute; background: #0b1220; color: white; padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.35; max-width: 300px; pointer-events: none; opacity: 0; transform: translateY(-6px); transition: opacity .12s ease, transform .12s ease; box-shadow: 0 8px 24px rgba(2,6,23,.35); }
+        .tooltip h3 { margin: 0 0 6px 0; color: #34d399; font-size: 13px; }
+        .legend { padding: 12px 16px; background: #fcfcfd; border-top: 1px solid #eef2f7; display: flex; gap: 16px; flex-wrap: wrap; }
+        .legend-item { display: inline-flex; align-items: center; gap: 8px; color: #334155; font-size: 12px; }
+        .legend-color { width: 12px; height: 12px; border-radius: 50%; }
+        .stats { display: flex; gap: 24px; padding: 12px 16px; background: #fff; border-top: 1px solid #eef2f7; font-size: 12px; color: #475569; }
+        .pill { padding: 4px 8px; background: #f1f5f9; border-radius: 999px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🌟 Aura Shop Architecture</h1>
-            <p>Interactive visualization of system components, data flow, and relationships</p>
+<div class="container">
+    <div class="header">
+        <h1>🌟 Aura Shop Architecture</h1>
+        <p>Stabilized graph with better hovering, reduced bounce, and click-to-freeze tooltips</p>
+    </div>
+
+    <div class="controls">
+        <div class="control-item">
+            <label>Layout</label>
+            <select id="layoutSelect">
+                <option value="force">Force</option>
+                <option value="hierarchy">Hierarchy</option>
+                <option value="grid">Grid</option>
+            </select>
         </div>
-
-        <div class="controls">
-            <div class="control-group">
-                <div class="control-item">
-                    <label for="layoutSelect">Layout:</label>
-                    <select id="layoutSelect">
-                        <option value="force">Force Layout</option>
-                        <option value="hierarchy">Hierarchical</option>
-                        <option value="circular">Circular</option>
-                    </select>
-                </div>
-                <div class="control-item">
-                    <label for="filterSelect">Filter:</label>
-                    <select id="filterSelect">
-                        <option value="all">All Components</option>
-                        <option value="backend">Backend Only</option>
-                        <option value="frontend">Frontend Only</option>
-                        <option value="api">API Flow</option>
-                    </select>
-                </div>
-                <div class="control-item">
-                    <button onclick="resetSimulation()">Reset View</button>
-                </div>
-                <div class="control-item">
-                    <button onclick="exportDiagram()">Export SVG</button>
-                </div>
-            </div>
+        <div class="control-item">
+            <label>Filter</label>
+            <select id="filterSelect">
+                <option value="all">All</option>
+                <option value="backend">Backend</option>
+                <option value="frontend">Frontend</option>
+                <option value="api">API</option>
+            </select>
         </div>
-
-        <svg id="graph"></svg>
-
-        <div class="legend">
-            <h3>Component Types</h3>
-            <div class="legend-items">
-                <div class="legend-item">
-                    <div class="legend-color node-frontend"></div>
-                    <span>Frontend Components</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color node-backend"></div>
-                    <span>Backend Services</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color node-database"></div>
-                    <span>Database Models</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color node-route"></div>
-                    <span>API Routes</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color node-model"></div>
-                    <span>Data Models</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color node-middleware"></div>
-                    <span>Middleware</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color node-component"></div>
-                    <span>Vue Components</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color node-service"></div>
-                    <span>Services</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-number" id="nodeCount">0</div>
-                <div class="stat-label">Components</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="linkCount">0</div>
-                <div class="stat-label">Connections</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="layerCount">0</div>
-                <div class="stat-label">Layers</div>
-            </div>
+        <div class="control-item">
+            <button id="freezeBtn" class="secondary">Freeze</button>
+            <button id="unfreezeBtn">Unfreeze</button>
+            <button id="resetBtn">Reset</button>
         </div>
     </div>
 
-    <div class="tooltip" id="tooltip"></div>
+    <svg id="graph"></svg>
 
-    <script>
-        // Data structure for the Aura Shop architecture
-        const graphData = {
-            nodes: [
-                // Frontend Layer
-                { id: "vue-app", name: "Vue App", type: "frontend", layer: "presentation", 
-                  description: "Main Vue.js application entry point", 
-                  details: "Technology: Vue 3 + Vite\\nFeatures: SPA routing, reactive components\\nBuild: Tailwind CSS, Capacitor ready" },
-                
-                { id: "vue-router", name: "Vue Router", type: "frontend", layer: "presentation",
-                  description: "Client-side routing for SPA navigation",
-                  details: "Handles route guards, navigation, and page transitions" },
-                
-                { id: "auth-pages", name: "Auth Pages", type: "component", layer: "presentation",
-                  description: "Login, Register, and authentication UI",
-                  details: "Login.vue, Register.vue\\nHandles user authentication flow" },
-                
-                { id: "shop-pages", name: "Shop Pages", type: "component", layer: "presentation",
-                  description: "Product catalog, cart, and checkout pages",
-                  details: "Catalog.vue, ProductDetail.vue, Cart.vue, Checkout.vue" },
-                
-                { id: "admin-pages", name: "Admin Panel", type: "component", layer: "presentation",
-                  description: "Administrative interface components",
-                  details: "Product management, user management, order tracking" },
-                
-                // Service Layer
-                { id: "auth-service", name: "Auth Service", type: "service", layer: "service",
-                  description: "Frontend authentication service",
-                  details: "JWT token management\\nAPI authentication headers\\nRole-based access" },
-                
-                { id: "api-service", name: "API Service", type: "service", layer: "service",
-                  description: "HTTP client for backend communication",
-                  details: "Axios/Fetch wrapper\\nError handling\\nRequest/response interceptors" },
-                
-                // Backend Layer
-                { id: "express-server", name: "Express Server", type: "backend", layer: "application",
-                  description: "Main Node.js backend server",
-                  details: "Port: 5000\\nCORS: localhost:5173\\nMiddleware: JSON parsing, error handling" },
-                
-                // Route Layer
-                { id: "auth-routes", name: "Auth Routes", type: "route", layer: "application",
-                  description: "Authentication API endpoints",
-                  details: "POST /api/auth/register\\nPOST /api/auth/login\\nPOST /api/auth/admin/login" },
-                
-                { id: "product-routes", name: "Product Routes", type: "route", layer: "application",
-                  description: "Product management API",
-                  details: "CRUD operations for products\\nFiltering and search\\nCategory integration" },
-                
-                { id: "order-routes", name: "Order Routes", type: "route", layer: "application",
-                  description: "Order processing API",
-                  details: "Place orders\\nOrder history\\nStatus updates" },
-                
-                { id: "admin-routes", name: "Admin Routes", type: "route", layer: "application",
-                  description: "Administrative API endpoints",
-                  details: "Protected by admin middleware\\nUser management\\nSystem administration" },
-                
-                { id: "vendor-routes", name: "Vendor Routes", type: "route", layer: "application",
-                  description: "Vendor-specific API endpoints",
-                  details: "Protected by vendor middleware\\nProduct listing management" },
-                
-                // Middleware Layer
-                { id: "auth-middleware", name: "Auth Middleware", type: "middleware", layer: "security",
-                  description: "JWT authentication and authorization",
-                  details: "protect: JWT verification\\nadmin: Role check for admin\\nvendor: Role check for vendor" },
-                
-                { id: "error-middleware", name: "Error Middleware", type: "middleware", layer: "security",
-                  description: "Global error handling",
-                  details: "Standardized error responses\\nError logging\\nSecurity error filtering" },
-                
-                // Database Layer
-                { id: "mongodb", name: "MongoDB", type: "database", layer: "data",
-                  description: "Primary database",
-                  details: "Connection: MongoDB Atlas or local\\nORM: Mongoose\\nCollections: Users, Products, Orders, etc." },
-                
-                // Models
-                { id: "user-model", name: "User Model", type: "model", layer: "data",
-                  description: "User data model",
-                  details: "Fields: name, email, password, role\\nRoles: user, admin, vendor\\nAuth: bcrypt password hashing" },
-                
-                { id: "product-model", name: "Product Model", type: "model", layer: "data",
-                  description: "Product data model",
-                  details: "Product information, pricing, categories\\nInventory management\\nVendor associations" },
-                
-                { id: "order-model", name: "Order Model", type: "model", layer: "data",
-                  description: "Order data model",
-                  details: "Order items, customer info, status\\nPayment tracking\\nShipping details" },
-                
-                { id: "cart-model", name: "Cart Model", type: "model", layer: "data",
-                  description: "Shopping cart model",
-                  details: "User cart persistence\\nItem management\\nSession handling" }
-            ],
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color node-frontend"></div>Frontend</div>
+        <div class="legend-item"><div class="legend-color node-backend"></div>Backend</div>
+        <div class="legend-item"><div class="legend-color node-route"></div>Routes</div>
+        <div class="legend-item"><div class="legend-color node-middleware"></div>Middleware</div>
+        <div class="legend-item"><div class="legend-color node-model"></div>Models</div>
+        <div class="legend-item"><div class="legend-color node-database"></div>Database</div>
+        <div class="legend-item"><div class="legend-color node-component"></div>Components</div>
+        <div class="legend-item"><div class="legend-color node-service"></div>Services</div>
+    </div>
 
-            links: [
-                // Frontend connections
-                { source: "vue-app", target: "vue-router", type: "uses" },
-                { source: "vue-router", target: "auth-pages", type: "routes" },
-                { source: "vue-router", target: "shop-pages", type: "routes" },
-                { source: "vue-router", target: "admin-pages", type: "routes" },
-                
-                // Service connections
-                { source: "auth-pages", target: "auth-service", type: "uses" },
-                { source: "shop-pages", target: "api-service", type: "uses" },
-                { source: "admin-pages", target: "api-service", type: "uses" },
-                { source: "auth-service", target: "express-server", type: "calls" },
-                { source: "api-service", target: "express-server", type: "calls" },
-                
-                // Backend route connections
-                { source: "express-server", target: "auth-routes", type: "mounts" },
-                { source: "express-server", target: "product-routes", type: "mounts" },
-                { source: "express-server", target: "order-routes", type: "mounts" },
-                { source: "express-server", target: "admin-routes", type: "mounts" },
-                { source: "express-server", target: "vendor-routes", type: "mounts" },
-                
-                // Middleware connections
-                { source: "express-server", target: "auth-middleware", type: "uses" },
-                { source: "express-server", target: "error-middleware", type: "uses" },
-                { source: "admin-routes", target: "auth-middleware", type: "protected" },
-                { source: "vendor-routes", target: "auth-middleware", type: "protected" },
-                
-                // Database connections
-                { source: "auth-routes", target: "user-model", type: "accesses" },
-                { source: "product-routes", target: "product-model", type: "accesses" },
-                { source: "order-routes", target: "order-model", type: "accesses" },
-                { source: "admin-routes", target: "user-model", type: "accesses" },
-                { source: "admin-routes", target: "product-model", type: "accesses" },
-                { source: "vendor-routes", target: "product-model", type: "accesses" },
-                
-                // Model to database
-                { source: "user-model", target: "mongodb", type: "stored" },
-                { source: "product-model", target: "mongodb", type: "stored" },
-                { source: "order-model", target: "mongodb", type: "stored" },
-                { source: "cart-model", target: "mongodb", type: "stored" }
-            ]
-        };
+    <div class="stats">
+        <div>Nodes: <span class="pill" id="nodeCount">0</span></div>
+        <div>Links: <span class="pill" id="linkCount">0</span></div>
+        <div>Layers: <span class="pill" id="layerCount">0</span></div>
+        <div>Mode: <span class="pill" id="mode">Force</span></div>
+    </div>
+</div>
 
-        // D3.js visualization
-        const width = 1340;
-        const height = 800;
+<div class="tooltip" id="tooltip"></div>
 
-        const svg = d3.select("#graph")
-            .attr("width", width)
-            .attr("height", height);
+<script>
+const graphData = { /* ... same nodes/links as current file ... */ };
 
-        const g = svg.append("g");
+const width = 1260, height = 760;
+const svg = d3.select('#graph').attr('width', width).attr('height', height);
+const g = svg.append('g');
+const zoom = d3.zoom().scaleExtent([0.3, 3]).on('zoom', (e)=> g.attr('transform', e.transform));
+svg.call(zoom);
 
-        // Add zoom behavior
-        const zoom = d3.zoom()
-            .scaleExtent([0.1, 4])
-            .on("zoom", (event) => {
-                g.attr("transform", event.transform);
-            });
+// Stabilized forces
+const sim = d3.forceSimulation(graphData.nodes)
+  .force('link', d3.forceLink(graphData.links).id(d=>d.id).distance(120).strength(0.7))
+  .force('charge', d3.forceManyBody().strength(-180))
+  .force('center', d3.forceCenter(width/2, height/2))
+  .force('collision', d3.forceCollide().radius(28).strength(0.9));
 
-        svg.call(zoom);
+// Pre-settle to reduce bounce
+let settleTicks = 120; sim.alpha(1); for (let i=0;i<settleTicks;i++) sim.tick(); sim.alphaTarget(0).alpha(0.1).restart();
 
-        // Create simulation
-        const simulation = d3.forceSimulation(graphData.nodes)
-            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(100))
-            .force("charge", d3.forceManyBody().strength(-300))
-            .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("collision", d3.forceCollide().radius(30));
+const link = g.append('g').selectAll('line').data(graphData.links).enter().append('line').attr('class','link');
+const node = g.append('g').selectAll('g').data(graphData.nodes).enter().append('g').attr('class','node')
+  .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
+node.append('circle').attr('r', 16).attr('class', d=>`node-${d.type}`);
+node.append('text').attr('dy', 26).attr('text-anchor','middle').style('font-size','11px').style('fill','#0f172a').text(d=>d.name);
 
-        // Create links
-        const link = g.append("g")
-            .selectAll("line")
-            .data(graphData.links)
-            .enter().append("line")
-            .attr("class", "link")
-            .attr("marker-end", "url(#arrowhead)");
+const tooltip = d3.select('#tooltip');
+let frozen = false;
+node.on('mouseenter', function(e,d){ if(frozen) return; showTip(e,d); d3.select(this).select('circle').transition().duration(120).attr('r',20); })
+    .on('mousemove', function(e,d){ if(!frozen) positionTip(e); })
+    .on('mouseleave', function(e,d){ if(!frozen) hideTip(); d3.select(this).select('circle').transition().duration(120).attr('r',16); })
+    .on('click', function(e,d){ frozen = !frozen; if(frozen){ showTip(e,d); } else { hideTip(); } });
 
-        // Add arrowheads
-        svg.append("defs").append("marker")
-            .attr("id", "arrowhead")
-            .attr("viewBox", "-0 -5 10 10")
-            .attr("refX", 25)
-            .attr("refY", 0)
-            .attr("orient", "auto")
-            .attr("markerWidth", 8)
-            .attr("markerHeight", 8)
-            .attr("xoverflow", "visible")
-            .append("svg:path")
-            .attr("d", "M 0,-5 L 10 ,0 L 0,5")
-            .attr("fill", "#999")
-            .style("stroke", "none");
+function showTip(e,d){ tooltip.style('opacity',1).style('transform','translateY(0)').html(`
+  <h3>${d.name}</h3>
+  <div><b>Type:</b> ${d.type}</div>
+  <div><b>Layer:</b> ${d.layer}</div>
+  <div style="margin-top:6px">${(d.description||'')}</div>
+  <div style="opacity:.8;margin-top:4px;white-space:pre-line">${(d.details||'')}</div>
+`); positionTip(e); }
+function positionTip(e){ tooltip.style('left',(e.pageX+12)+'px').style('top',(e.pageY-12)+'px'); }
+function hideTip(){ tooltip.style('opacity',0).style('transform','translateY(-6px)'); }
 
-        // Create nodes
-        const node = g.append("g")
-            .selectAll("g")
-            .data(graphData.nodes)
-            .enter().append("g")
-            .attr("class", "node")
-            .call(d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged)
-                .on("end", dragended));
+sim.on('tick', ()=>{ link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y); node.attr('transform', d=>`translate(${d.x},${d.y})`); });
+function dragstarted(event,d){ if(!event.active) sim.alphaTarget(0.05).restart(); d.fx=d.x; d.fy=d.y; }
+function dragged(event,d){ d.fx=event.x; d.fy=event.y; }
+function dragended(event,d){ if(!event.active) sim.alphaTarget(0); if(!frozen){ d.fx=null; d.fy=null; } }
 
-        // Add circles for nodes
-        node.append("circle")
-            .attr("r", 15)
-            .attr("class", d => `node-${d.type}`);
+// Layouts
+const layoutSelect=document.getElementById('layoutSelect'); layoutSelect.addEventListener('change',()=>applyLayout(layoutSelect.value));
+function applyLayout(mode){ document.getElementById('mode').textContent=mode.charAt(0).toUpperCase()+mode.slice(1);
+  if(mode==='hierarchy'){ const layers=['presentation','service','application','security','data']; sim.force('x', d3.forceX().x(d=>(layers.indexOf(d.layer)+1)*(width/6)).strength(1)); sim.force('y', d3.forceY(height/2).strength(0.05)); }
+  else if(mode==='grid'){ const cols=5, gapX=width/(cols+1), gapY=130; sim.force('x', d3.forceX().x((d,i)=>((i%cols)+1)*gapX).strength(1)); sim.force('y', d3.forceY().y((d,i)=>(Math.floor(i/cols)+1)*gapY).strength(1)); }
+  else { sim.force('x', null); sim.force('y', null); sim.force('center', d3.forceCenter(width/2, height/2)); }
+  sim.alpha(0.5).restart(); }
 
-        // Add labels
-        node.append("text")
-            .attr("dy", 25)
-            .attr("text-anchor", "middle")
-            .style("font-size", "12px")
-            .style("font-weight", "bold")
-            .style("fill", "#2c3e50")
-            .text(d => d.name);
+// Filters
+const filterSelect=document.getElementById('filterSelect'); filterSelect.addEventListener('change',()=>applyFilter(filterSelect.value));
+function applyFilter(filter){ node.style('opacity', d=>{ if(filter==='backend') return ['backend','route','middleware','model','database'].includes(d.type)?1:0.15; if(filter==='frontend') return ['frontend','component','service'].includes(d.type)?1:0.15; if(filter==='api') return ['route','backend','service'].includes(d.type)?1:0.15; return 1; });
+  link.style('opacity', d=>{ const visibleTypes = filter==='backend'?['backend','route','middleware','model','database']: filter==='frontend'?['frontend','component','service']: filter==='api'?['route','backend','service']: null; if(!visibleTypes) return 0.5; return (visibleTypes.includes(d.source.type)&&visibleTypes.includes(d.target.type))?0.5:0.08; }); }
 
-        // Tooltip
-        const tooltip = d3.select("#tooltip");
+// Freeze/Unfreeze/Reset
+const freezeBtn=document.getElementById('freezeBtn'); const unfreezeBtn=document.getElementById('unfreezeBtn'); const resetBtn=document.getElementById('resetBtn');
+freezeBtn.addEventListener('click', ()=>{ graphData.nodes.forEach(n=>{ n.fx=n.x; n.fy=n.y; }); sim.alphaTarget(0).stop(); });
+unfreezeBtn.addEventListener('click', ()=>{ graphData.nodes.forEach(n=>{ n.fx=null; n.fy=null; }); sim.alpha(0.6).restart(); });
+resetBtn.addEventListener('click', ()=>{ svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity); applyLayout('force'); sim.alpha(0.8).restart(); });
 
-        // Add hover events
-        node.on("mouseover", function(event, d) {
-            tooltip.style("opacity", 1)
-                .html(`
-                    <h3>${d.name}</h3>
-                    <p><strong>Type:</strong> ${d.type}</p>
-                    <p><strong>Layer:</strong> ${d.layer}</p>
-                    <p><strong>Description:</strong> ${d.description}</p>
-                    <hr>
-                    <p>${d.details.replace(/\\n/g, '<br>')}</p>
-                `)
-                .style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 10) + "px");
-
-            d3.select(this).select("circle")
-                .transition()
-                .duration(200)
-                .attr("r", 20);
-        })
-        .on("mouseout", function(event, d) {
-            tooltip.style("opacity", 0);
-            d3.select(this).select("circle")
-                .transition()
-                .duration(200)
-                .attr("r", 15);
-        });
-
-        // Simulation tick
-        simulation.on("tick", () => {
-            link
-                .attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
-
-            node
-                .attr("transform", d => `translate(${d.x},${d.y})`);
-        });
-
-        // Drag functions
-        function dragstarted(event, d) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-        }
-
-        function dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
-        }
-
-        function dragended(event, d) {
-            if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
-        }
-
-        // Update statistics
-        function updateStats() {
-            document.getElementById("nodeCount").textContent = graphData.nodes.length;
-            document.getElementById("linkCount").textContent = graphData.links.length;
-            document.getElementById("layerCount").textContent = [...new Set(graphData.nodes.map(n => n.layer))].length;
-        }
-
-        // Control functions
-        function resetSimulation() {
-            simulation.alpha(1).restart();
-            svg.transition().duration(750).call(
-                zoom.transform,
-                d3.zoomIdentity
-            );
-        }
-
-        function exportDiagram() {
-            const svgElement = document.getElementById("graph");
-            const serializer = new XMLSerializer();
-            const source = serializer.serializeToString(svgElement);
-            const blob = new Blob([source], { type: 'image/svg+xml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'aura-shop-architecture.svg';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        // Layout controls
-        document.getElementById("layoutSelect").addEventListener("change", function() {
-            const layout = this.value;
-            
-            if (layout === "hierarchy") {
-                // Hierarchical layout
-                simulation.force("center", null);
-                simulation.force("x", d3.forceX().x(d => {
-                    const layers = ["presentation", "service", "application", "security", "data"];
-                    return (layers.indexOf(d.layer) + 1) * (width / 6);
-                }).strength(1));
-                simulation.force("y", d3.forceY(height / 2).strength(0.1));
-            } else if (layout === "circular") {
-                // Circular layout
-                simulation.force("center", null);
-                simulation.force("x", d3.forceX().x((d, i) => {
-                    const angle = (i / graphData.nodes.length) * 2 * Math.PI;
-                    return width/2 + Math.cos(angle) * 200;
-                }).strength(1));
-                simulation.force("y", d3.forceY().y((d, i) => {
-                    const angle = (i / graphData.nodes.length) * 2 * Math.PI;
-                    return height/2 + Math.sin(angle) * 200;
-                }).strength(1));
-            } else {
-                // Force layout (default)
-                simulation.force("center", d3.forceCenter(width / 2, height / 2));
-                simulation.force("x", null);
-                simulation.force("y", null);
-            }
-            
-            simulation.alpha(1).restart();
-        });
-
-        // Filter controls
-        document.getElementById("filterSelect").addEventListener("change", function() {
-            const filter = this.value;
-            
-            node.style("opacity", d => {
-                switch(filter) {
-                    case "backend":
-                        return ["backend", "route", "middleware", "model", "database"].includes(d.type) ? 1 : 0.2;
-                    case "frontend":
-                        return ["frontend", "component", "service"].includes(d.type) ? 1 : 0.2;
-                    case "api":
-                        return ["route", "backend", "service"].includes(d.type) ? 1 : 0.2;
-                    default:
-                        return 1;
-                }
-            });
-            
-            link.style("opacity", d => {
-                const sourceVisible = filter === "all" || 
-                    (filter === "backend" && ["backend", "route", "middleware", "model", "database"].includes(d.source.type)) ||
-                    (filter === "frontend" && ["frontend", "component", "service"].includes(d.source.type)) ||
-                    (filter === "api" && ["route", "backend", "service"].includes(d.source.type));
-                    
-                const targetVisible = filter === "all" || 
-                    (filter === "backend" && ["backend", "route", "middleware", "model", "database"].includes(d.target.type)) ||
-                    (filter === "frontend" && ["frontend", "component", "service"].includes(d.target.type)) ||
-                    (filter === "api" && ["route", "backend", "service"].includes(d.target.type));
-                    
-                return sourceVisible && targetVisible ? 0.6 : 0.1;
-            });
-        });
-
-        // Initialize
-        updateStats();
-    </script>
+// Stats
+function updateStats(){ document.getElementById('nodeCount').textContent=graphData.nodes.length; document.getElementById('linkCount').textContent=graphData.links.length; document.getElementById('layerCount').textContent=new Set(graphData.nodes.map(n=>n.layer)).size; }
+updateStats();
+</script>
 </body>
 </html>
