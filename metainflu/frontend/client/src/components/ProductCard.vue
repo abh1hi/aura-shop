@@ -37,7 +37,7 @@
     <!-- Product Info -->
     <div class="p-4 text-center">
       <h3 class="text-lg font-medium text-gray-900 truncate">{{ product.name }}</h3>
-      <p class="text-sm text-gray-500 mt-1">${{ product.price.toFixed(2) }}</p>
+      <p class="text-sm text-gray-500 mt-1">${{ product.price ? product.price.toFixed(2) : 'N/A' }}</p>
     </div>
 
     <!-- Subtle Hover Shadow Glow -->

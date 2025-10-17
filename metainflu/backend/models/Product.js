@@ -47,6 +47,7 @@ const productSchema = new mongoose.Schema({
     url: { type: String },
     altText: { type: String },
     position: { type: Number },
+    variantSku: { type: String, default: null }
   }],
   weight: { type: Number },                               // Numeric (with unit in attribute)
   dimensions: {

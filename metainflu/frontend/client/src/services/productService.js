@@ -12,11 +12,12 @@ const API_URL = 'http://localhost:5000/api/products/';
  */
 const getProducts = async (categoryId = null) => {
   try {
-    let url = API_URL;
+    let url = new URL(API_URL);
     if (categoryId) {
         // Append category ID as a query parameter for filtering
-        url += `?category=${categoryId}`;
+        url.searchParams.append('category', categoryId);
     }
+    url.searchParams.append('time', new Date().getTime());
     
     const response = await fetch(url);
 
@@ -34,7 +35,9 @@ const getProducts = async (categoryId = null) => {
 
 const getProductById = async (id) => {
   try {
-    const response = await fetch(`${API_URL}${id}`);
+    let url = new URL(`${API_URL}${id}`);
+    url.searchParams.append('time', new Date().getTime());
+    const response = await fetch(url);
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -50,4 +53,5 @@ const getProductById = async (id) => {
 
 export default {
   getProducts,
+  getProductById,
 };

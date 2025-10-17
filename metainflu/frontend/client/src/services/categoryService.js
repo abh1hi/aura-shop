@@ -11,7 +11,9 @@ const API_URL = 'http://localhost:5000/api/categories/';
  */
 const getCategories = async () => {
   try {
-    const response = await fetch(API_URL);
+    let url = new URL(API_URL);
+    url.searchParams.append('time', new Date().getTime());
+    const response = await fetch(url);
 
     if (!response.ok) {
       const errorData = await response.json();

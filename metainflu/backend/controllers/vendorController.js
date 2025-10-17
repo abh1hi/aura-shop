@@ -102,7 +102,7 @@ const getVendorDashboardStats = asyncHandler(async (req, res) => {
 // @access  Private/Vendor
 const getVendorProducts = asyncHandler(async (req, res) => {
   // Populate the correct path from schema: 'categories' (array), select only name
-  const products = await Product.find({ user: req.user._id }).populate('categories', 'name');
+  const products = await Product.find({ user: req.user._id }).populate('categories', 'name').populate('variants');
   res.json(products);
 });
 

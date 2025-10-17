@@ -25,7 +25,7 @@ import OrderFulfillment from '../pages/OrderFulfillment.vue';
 import Analytics from '../pages/Analytics.vue';
 import Returns from '../pages/Returns.vue';
 import Invoices from '../pages/Invoices.vue';
-import ViewSales from '../pages/ViewSales.vue';
+import EditProduct from '../pages/EditProduct.vue';
 
 
 const routes = [
@@ -138,9 +138,9 @@ const routes = [
         component: Returns,
       },
       {
-        path: 'invoices',
-        name: 'Invoices',
-        component: Invoices,
+        path: 'products/edit/:id',
+        name: 'EditProduct',
+        component: EditProduct,
       },
     ],
   },

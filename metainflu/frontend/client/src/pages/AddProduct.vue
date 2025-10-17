@@ -121,9 +121,9 @@ const saveProduct = async () => {
   // Minimal payload; backend will store category into `categories` array
   const productPayload = {
     name: newProduct.value.name,
-    price: newProduct.value.price,
+    price: typeof newProduct.value.price === 'number' ? newProduct.value.price : 0,
     description: newProduct.value.description,
-    stock: newProduct.value.stock,
+    stock: typeof newProduct.value.stock === 'number' ? newProduct.value.stock : 0,
     ...categoryPayload,
   };
 
