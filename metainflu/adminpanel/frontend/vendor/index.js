@@ -1,5 +1,5 @@
-// Main entry point for the Vendor Admin Panel
-// This file serves as the module index for the vendor admin panel
+// Main entry point for the Vendor Panel
+// This file serves as the module index for the vendor webapp
 
 // Import and re-export all main components
 export { default as App } from './src/App.vue';
@@ -15,14 +15,14 @@ export { default as OrderFulfillment } from './src/pages/OrderFulfillment.vue';
 export { default as Invoices } from './src/pages/Invoices.vue';
 export { default as ViewSales } from './src/pages/ViewSales.vue';
 export { default as Account } from './src/pages/Account.vue';
+export { default as VendorLanding } from './src/pages/VendorLanding.vue';
 
-// Import and re-export all components
-export { default as AdminNavbar } from './src/components/AdminNavbar.vue';
-export { default as AdminSidebar } from './src/components/AdminSidebar.vue';
+// Import and re-export vendor components
+export { default as VendorNavbar } from './src/components/VendorNavbar.vue';
+export { default as VendorSidebar } from './src/components/VendorSidebar.vue';
 export { default as HelloWorld } from './src/components/HelloWorld.vue';
 
-// Import and re-export all services
-export { default as adminService } from './src/services/adminService.js';
+// Import and re-export services
 export { default as authService } from './src/services/authService.js';
 
 // Import and re-export styles
@@ -36,9 +36,9 @@ export { default as postcssConfig } from './postcss.config.js';
 
 // Package information
 export const packageInfo = {
-  name: 'vendor-admin-panel',
+  name: 'vendor-webapp',
   version: '1.0.0',
-  description: 'Vue.js based vendor admin panel for Aura Shop',
+  description: 'Vue.js based vendor webapp for Aura Shop',
   main: 'index.js',
   type: 'module',
   dependencies: {
@@ -56,7 +56,7 @@ export const packageInfo = {
 
 // Utility functions for the vendor panel
 export const utils = {
-  // Initialize the vendor panel
+  // Initialize the vendor app
   initializeApp: () => {
     const { createApp } = require('vue');
     const App = require('./src/App.vue').default;
@@ -76,24 +76,17 @@ export const utils = {
       { name: 'OrderFulfillment', path: '/orders', component: 'OrderFulfillment' },
       { name: 'Invoices', path: '/invoices', component: 'Invoices' },
       { name: 'ViewSales', path: '/sales', component: 'ViewSales' },
-      { name: 'Account', path: '/account', component: 'Account' }
+      { name: 'Account', path: '/account', component: 'Account' },
+      { name: 'VendorLanding', path: '/landing', component: 'VendorLanding' }
     ];
   },
   
   // Get available components
   getComponents: () => {
     return {
-      layout: ['AdminNavbar', 'AdminSidebar'],
-      pages: ['VendorPanel', 'Analytics', 'ManageProducts', 'AddProduct', 'EditProduct', 'OrderFulfillment', 'Invoices', 'ViewSales', 'Account'],
+      layout: ['VendorNavbar', 'VendorSidebar'],
+      pages: ['VendorPanel', 'Analytics', 'ManageProducts', 'AddProduct', 'EditProduct', 'OrderFulfillment', 'Invoices', 'ViewSales', 'Account', 'VendorLanding'],
       common: ['HelloWorld']
-    };
-  },
-  
-  // Get available services
-  getServices: () => {
-    return {
-      admin: 'adminService',
-      auth: 'authService'
     };
   }
 };
@@ -102,13 +95,13 @@ export const utils = {
 export const devUtils = {
   // Start development server
   startDev: () => {
-    console.log('Starting Vendor Admin Panel development server...');
+    console.log('Starting Vendor Webapp development server...');
     console.log('Available at: http://localhost:5173');
   },
   
   // Build for production
   build: () => {
-    console.log('Building Vendor Admin Panel for production...');
+    console.log('Building Vendor Webapp for production...');
   },
   
   // Preview production build
