@@ -22,9 +22,11 @@
         <img :src="product.imageUrl || 'https://placehold.co/300x200/f0f0f0/333?text=N/A'" :alt="product.name" class="w-full h-48 object-cover">
         <div class="p-4">
           <h3 class="text-lg font-semibold text-gray-800">{{ product.name }}</h3>
-          <p class="text-gray-600">${{ product.price.toFixed(2) }}</p>
+          <p class="text-gray-600">
+            ${{ typeof product.price === 'number' ? product.price.toFixed(2) : '0.00' }}
+          </p>
           <p class="text-sm text-gray-500" :class="{'text-red-500': product.stock < 10, 'text-green-600': product.stock >= 10}">
-            {{ product.stock || 0 }} in stock
+            {{ Number.isFinite(product.stock) ? product.stock : 0 }} in stock
           </p>
           <!-- Optional: Show first category name if available -->
           <p v-if="product.categories && product.categories.length" class="text-xs text-gray-400 mt-1">
@@ -53,6 +55,12 @@ const loading = ref(true);
 const error = ref(null);
 const deletingId = ref(null);
 
+// Helper to coerce safe numeric values
+const toSafeNumber = (val, def = 0) => {
+  const n = typeof val === 'string' ? Number(val) : val;
+  return Number.isFinite(n) ? n : def;
+};
+
 const fetchProducts = async () => {
   loading.value = true;
   error.value = null;
@@ -60,7 +68,9 @@ const fetchProducts = async () => {
     const response = await vendorService.getVendorProducts();
     products.value = response.map(p => ({ 
       ...p, 
-      stock: p.stock || 0,
+      // SECURITY: coerce price and stock to safe numeric values to avoid XSS/logic issues
+      price: toSafeNumber(p.price, 0),
+      stock: toSafeNumber(p.stock, 0),
       // Normalize categories to array and drop legacy single-category mapping
       categories: Array.isArray(p.categories) ? p.categories : (p.category ? [p.category] : []),
     }));
