@@ -1,5 +1,5 @@
 <template>
-  <aside class="w-[280px] hidden md:flex flex-col gap-3 p-3">
+  <aside class="hidden md:flex flex-col gap-3 p-3" :class="wrapperClass">
     <!-- Profile Card -->
     <div class="card p-3">
       <div class="flex items-center gap-3">
@@ -12,12 +12,18 @@
     </div>
 
     <!-- Navigation (grouped) -->
-    <nav class="grouped">
-      <button v-for="item in nav" :key="item.name" @click="go(item.to)" class="row w-full text-left">
-        <component :is="item.icon" class="h-5 w-5 mr-3 text-[color:var(--text-tertiary)]" />
-        <span class="text-[15px] text-[color:var(--text)]">{{ item.label }}</span>
-        <span class="ml-auto text-[12px] text-[color:var(--text-tertiary)]" v-if="item.badge">{{ item.badge }}</span>
-      </button>
+    <nav class="grouped" role="navigation" aria-label="Primary">
+      <RouterLink
+        v-for="item in nav"
+        :key="item.name"
+        :to="item.to"
+        class="row items-center"
+        :class="linkClass(item)"
+      >
+        <component :is="item.icon" class="h-5 w-5 mr-3" :class="iconClass(item)" />
+        <span class="text-[15px]">{{ item.label }}</span>
+        <span v-if="item.badge" class="ml-auto text-[12px] px-2 py-0.5 rounded-full" :class="badgeClass(item)">{{ item.badge }}</span>
+      </RouterLink>
     </nav>
 
     <!-- Quick KPIs -->
@@ -35,14 +41,16 @@
 </template>
 
 <script>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed } from 'vue';
+import { RouterLink, useRoute } from 'vue-router';
 import { HomeIcon, ChartBarIcon, ShoppingBagIcon, PlusCircleIcon, ClipboardDocumentListIcon, DocumentTextIcon, EyeIcon, UserIcon, BellIcon } from '@heroicons/vue/24/outline';
 
 export default {
   name: 'VendorSidebar',
+  components: { RouterLink, HomeIcon, ChartBarIcon, ShoppingBagIcon, PlusCircleIcon, ClipboardDocumentListIcon, DocumentTextIcon, EyeIcon, UserIcon, BellIcon },
   setup() {
-    const router = useRouter();
+    const route = useRoute();
+
     const vendorProfile = ref({ name: 'Rajesh Kumar', businessName: 'Kumar Electronics', avatar: '/images/vendor-avatar.jpg' });
     const monthlyRevenue = ref(125000);
     const pendingOrders = ref(23);
@@ -59,11 +67,34 @@ export default {
       { name: 'notifications', label: 'Notifications', to: { name: 'Notifications' }, icon: 'BellIcon' }
     ]);
 
-    const go = (to) => router.push(to);
+    const isActive = (to) => {
+      if (to.name && route.name) return route.name === to.name;
+      return route.path === (typeof to === 'string' ? to : to.path);
+    };
+
+    const linkClass = (item) => ({
+      'bg-black/5': isActive(item.to),
+      'text-[color:var(--text)]': isActive(item.to),
+      'text-[color:var(--text)] hover:bg-black/3': !isActive(item.to),
+      'rounded-none': true
+    });
+
+    const iconClass = (item) => ({
+      'text-[color:var(--primary)]': isActive(item.to),
+      'text-[color:var(--text-tertiary)]': !isActive(item.to)
+    });
+
+    const badgeClass = (item) => ({
+      'bg-[color:var(--primary)] text-white': isActive(item.to),
+      'bg-black/10 text-[color:var(--text)]': !isActive(item.to)
+    });
+
     const formatCurrency = (v) => new Intl.NumberFormat('en-IN').format(v);
 
-    return { vendorProfile, monthlyRevenue, pendingOrders, nav, go, formatCurrency };
-  },
-  components: { HomeIcon, ChartBarIcon, ShoppingBagIcon, PlusCircleIcon, ClipboardDocumentListIcon, DocumentTextIcon, EyeIcon, UserIcon, BellIcon }
+    // Sticky sidebar and width control
+    const wrapperClass = computed(() => 'w-[280px] sticky top-14 self-start');
+
+    return { vendorProfile, monthlyRevenue, pendingOrders, nav, linkClass, iconClass, badgeClass, formatCurrency, wrapperClass };
+  }
 };
 </script>
