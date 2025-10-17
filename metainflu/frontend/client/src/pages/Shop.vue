@@ -1,45 +1,22 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import ProductCard from '../components/ProductCard.vue';
 import productService from '../services/productService';
-import categoryService from '../services/categoryService'; 
-// 1. IMPORT THE DEDICATED PRODUCT CARD COMPONENT
-import ProductCard from '../components/ProductCard.vue'; 
+import categoryService from '../services/categoryService';
+import Navbar from '../components/Navbar.vue'; // Importing the site-wide Navbar for completeness, although App.vue manages it.
 
-// --- INLINE COMPONENTS ---
+// --- STATE MANAGEMENT ---
+const allProducts = ref([]);
+const categories = ref([]);
+const selectedCategoryId = ref(null); // Null means 'All' initially
+const isLoading = ref(true);
+const error = ref(null);
+const isSidebarOpen = ref(false); 
+const sortOption = ref('new'); 
 
-// 1. Navbar/Header Component (Kept minimal and inline for single-file approach)
-const AuraNavbar = {
-  emits: ['toggle-filter'],
-  template: `
-    <header class="ios-header-blur sticky top-0 z-50 transition duration-300">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <a href="#" class="text-2xl font-extrabold tracking-tight text-gray-900">AURA</a>
-        <nav class="hidden md:flex space-x-8 text-sm font-medium">
-          <a href="#" class="hover:text-gray-700 transition duration-150 nav-link font-bold text-gray-900 border-b-2 border-gray-900">Shop All</a>
-          <a href="#" class="hover:text-gray-700 transition duration-150 nav-link">New Arrivals</a>
-          <a href="#" class="hover:text-gray-700 transition duration-150 nav-link">Lookbook</a>
-          <a href="#" class="hover:text-gray-700 transition duration-150 nav-link">Our Story</a>
-        </nav>
-        <div class="flex items-center space-x-4">
-          <button aria-label="Search" class="p-2 rounded-full hover:bg-gray-100 transition duration-150">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          </button>
-          <button aria-label="Cart (0 items)" class="p-2 rounded-full hover:bg-gray-100 transition duration-150 relative">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-          </button>
-          <!-- Mobile Menu Button -->
-          <button @click="$emit('toggle-filter')" aria-label="Menu" class="md:hidden p-2 rounded-full hover:bg-gray-100 transition duration-150">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-          </button>
-        </div>
-      </div>
-    </header>
-  `,
-};
+// --- INLINE UTILITY COMPONENTS (Only retaining Footer) ---
 
-// 2. Product Card Component: REMOVED INLINE DEFINITION HERE
-
-// 3. Footer Component (Inline definition retained)
+// Footer Component
 const PageFooter = {
   template: `
     <footer class="mt-20 border-t border-gray-200 bg-white">
@@ -48,7 +25,7 @@ const PageFooter = {
           <div>
             <h4 class="text-lg font-bold mb-4">AURA</h4>
             <ul class="space-y-2 text-sm text-gray-600">
-              <li><a href="#" class="hover:text-gray-900">About Us</a></li>
+              <li><router-link to="/about" class="hover:text-gray-900">About Us</router-link></li>
               <li><a href="#" class="hover:text-gray-900">Careers</a></li>
               <li><a href="#" class="hover:text-gray-900">Sustainability</a></li>
             </ul>
@@ -57,7 +34,7 @@ const PageFooter = {
             <h4 class="text-lg font-bold mb-4">Customer Care</h4>
             <ul class="space-y-2 text-sm text-gray-600">
               <li><a href="#" class="hover:text-gray-900">Shipping & Returns</a></li>
-              <li><a href="#" class="hover:text-gray-900">Contact</a></li>
+              <li><router-link to="/contact" class="hover:text-gray-900">Contact</router-link></li>
               <li><a href="#" class="hover:text-gray-900">FAQ</a></li>
             </ul>
           </div>
@@ -73,7 +50,7 @@ const PageFooter = {
           </div>
         </div>
         <div class="mt-12 pt-8 border-t border-gray-100 text-center">
-          <p class="text-xs text-gray-500">&copy; 2024 AURA. All rights reserved.</p>
+          <p class="text-xs text-gray-500">&copy; {{ new Date().getFullYear() }} AURA. All rights reserved.</p>
         </div>
       </div>
     </footer>
@@ -81,102 +58,114 @@ const PageFooter = {
 };
 
 
-// --- SHOP PAGE LOGIC (UPDATED) ---
-
-const allProducts = ref([]);
-const categories = ref([]); // Stores fetched approved categories { _id, name }
-const selectedCategoryId = ref('All'); 
-const isSidebarOpen = ref(false); 
-const sortOption = ref('new'); 
-const isLoading = ref(true);
-const error = ref(null);
+// --- LOGIC AND DATA FETCHING ---
 
 const toggleSidebar = () => (isSidebarOpen.value = !isSidebarOpen.value);
 const closeSidebar = () => (isSidebarOpen.value = false);
 
 /**
- * Sets the selected category ID and triggers a new product fetch.
- * @param {string} id - The MongoDB ObjectID of the selected category, or 'All'.
+ * Fetches categories from the backend and adds an "All" option.
  */
-const selectCategory = (id) => {
-  if (selectedCategoryId.value === id) return; // Prevent unnecessary re-fetches
-  selectedCategoryId.value = id;
-  fetchProducts(id); 
-  closeSidebar();
+const fetchCategories = async () => {
+  try {
+    const data = await categoryService.getCategories();
+    categories.value = data;
+    // Set initial category to 'All'
+    selectedCategoryId.value = null; 
+  } catch (err) {
+    error.value = 'Failed to load categories.';
+    console.error('Category fetch error:', err);
+  }
 };
 
 /**
- * Fetches all products based on the currently selected filter.
- * @param {string} categoryId - The MongoDB ObjectID or 'All'.
+ * Fetches products from the backend, applying filtering if a category is selected.
+ * @param {string | null} categoryId The ObjectId of the category or null for all.
  */
-const fetchProducts = async (categoryId = selectedCategoryId.value) => {
+const fetchProducts = async (categoryId = null) => {
   isLoading.value = true;
   error.value = null;
-  allProducts.value = [];
-  
   try {
-    const filterId = categoryId === 'All' ? null : categoryId;
-    // The productService is designed to handle passing the filter parameter
-    const data = await productService.getProducts(filterId);
-    
-    // Assign fetched data 
-    allProducts.value = data; 
+    // Pass the selected categoryId (or null) to the service
+    const data = await productService.getProducts(categoryId);
+    allProducts.value = data;
   } catch (err) {
-    console.error('Error fetching products:', err);
-    error.value = err.message || 'Failed to load products from the store.';
+    error.value = err.message || 'Failed to load products.';
+    console.error('Product fetch error:', err);
+    allProducts.value = [];
   } finally {
     isLoading.value = false;
   }
 };
 
 /**
- * Fetches all approved categories for the filter sidebar.
+ * Handles category selection from the sidebar.
+ * @param {string | null} id The ObjectId or null/string 'All'.
  */
-const fetchCategories = async () => {
-    try {
-        const data = await categoryService.getCategories();
-        categories.value = data;
-    } catch (err) {
-        console.error('Error fetching categories for filter:', err);
-        error.value = error.value || 'Could not load category filters.';
-    }
+const selectCategory = (id) => {
+  // Map 'All' option to null for the API call
+  selectedCategoryId.value = id === 'All' ? null : id;
+  // Re-fetch products with the new filter
+  fetchProducts(selectedCategoryId.value);
+  closeSidebar(); 
 };
 
 
-// Computed property to add the "All Products" option to the fetched category list
+// --- COMPUTED PROPERTIES FOR DISPLAY ---
+
+// Adds 'All' category and formats categories for display
 const categoriesWithAll = computed(() => {
-  // Use category._id as the unique key
-  return [{ _id: 'All', name: 'All Products' }, ...categories.value];
+  const list = categories.value.map(cat => ({
+      ...cat,
+      // Calculate count by checking if the product's categories array contains the current cat._id
+      count: allProducts.value.filter(p => 
+        p.categories && p.categories.some(c => c._id === cat._id) 
+      ).length
+  }));
+  
+  // Add 'All' option
+  const allCount = allProducts.value.length;
+  list.unshift({ name: 'All', _id: null, count: allCount });
+  
+  return list;
 });
 
 
-// Computed property to apply client-side sorting on the fetched list
+const validProducts = computed(() => {
+  // Filter out any products that are missing a numeric price before sorting
+  return sortedProducts.value.filter(p => 
+    p && typeof p.price === 'number' && !isNaN(p.price)
+  );
+});
+
 const sortedProducts = computed(() => {
   let products = [...allProducts.value];
+  
+  // Filter out products without a valid price before sorting
+  products = products.filter(p => typeof p.price === 'number' && !isNaN(p.price));
+  
   if (sortOption.value === 'low-high') {
-    return products.sort((a, b) => (a.price || 0) - (b.price || 0));
+    return products.sort((a, b) => a.price - b.price);
   } else if (sortOption.value === 'high-low') {
-    return products.sort((a, b) => (b.price || 0) - (a.price || 0));
+    return products.sort((a, b) => b.price - a.price);
   } else if (sortOption.value === 'new') {
-    // Sort by createdAt descending (newest first)
+    // Sort by createdAt descending
     return products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
-  return products; // Default
+  return products;
 });
 
 
-// On Component Mount: Fetch everything
-onMounted(() => {
-  fetchCategories();
-  fetchProducts(); // Initial fetch (All products)
+onMounted(async () => {
+  await fetchCategories();
+  await fetchProducts();
 });
 </script>
 
 <template>
   <div class="min-h-screen bg-[#f7f7f7] text-[#1a1a1a] font-sans overflow-x-hidden">
     
-    <!-- Navbar Component -->
-    <AuraNavbar @toggle-filter="toggleSidebar" />
+    <!-- NOTE: The global Navbar is handled by the parent App.vue and router-view. -->
 
     <main class="max-w-7xl mx-auto">
       <section id="shop-all-page" class="page-content px-4 sm:px-6 lg:px-8 py-12 md:py-20">
@@ -193,27 +182,16 @@ onMounted(() => {
               <div>
                 <h3 class="font-medium mb-2">Category</h3>
                 <ul class="space-y-1 text-gray-600">
-                  <li v-for="cat in categoriesWithAll" :key="cat._id">
+                  <li v-for="cat in categoriesWithAll" :key="cat._id || 'all'">
                     <a 
                       href="#" 
-                      @click.prevent="selectCategory(cat._id)"
+                      @click.prevent="selectCategory(cat._id || 'All')"
                       :class="['hover:text-gray-900 transition duration-150', { 'font-semibold text-gray-900': selectedCategoryId === cat._id }]"
                     >
-                      {{ cat.name }} 
+                      {{ cat.name }} ({{ cat.count }})
                     </a>
                   </li>
                 </ul>
-              </div>
-              
-              <!-- Color Filter (Static Placeholder) -->
-              <div>
-                <h3 class="font-medium mb-2">Color</h3>
-                <div class="flex flex-wrap gap-2">
-                  <span class="w-6 h-6 rounded-full bg-black border border-gray-400 cursor-pointer transition hover:scale-110"></span>
-                  <span class="w-6 h-6 rounded-full bg-white border border-gray-400 ring-2 ring-transparent hover:ring-gray-900 cursor-pointer transition"></span>
-                  <span class="w-6 h-6 rounded-full bg-neutral-500 cursor-pointer transition hover:scale-110"></span>
-                  <span class="w-6 h-6 rounded-full bg-stone-700 cursor-pointer transition hover:scale-110"></span>
-                </div>
               </div>
               
               <!-- Sort By Dropdown -->
@@ -249,16 +227,15 @@ onMounted(() => {
                </div>
             </div>
             
-            <!-- Loading/Error State -->
-            <div v-if="isLoading" class="text-center py-20 col-span-full">
-              <p class="text-xl font-medium text-gray-500">Loading products... </p>
+            <!-- Loading and Error States -->
+            <div v-if="isLoading" class="text-center py-20">
+                <p class="text-lg text-gray-500">Loading products, please wait...</p>
             </div>
-             <div v-else-if="error" class="text-center py-20 col-span-full text-red-500">
-              <p class="text-xl font-medium">Error loading data: {{ error }}</p>
-              <button @click="fetchProducts" class="mt-4 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">Try Reloading</button>
+            <div v-else-if="error" class="text-center py-20 text-red-500 p-4 bg-red-100 rounded-lg">
+                {{ error }}
             </div>
 
-            <!-- Product Grid -->
+            <!-- Grid Display -->
             <transition-group v-else name="fade-up" tag="div" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
               <ProductCard
                 v-for="product in sortedProducts"
@@ -274,7 +251,7 @@ onMounted(() => {
               <p class="text-sm text-gray-300 mt-2">Try selecting 'All' or adjusting the sort option.</p>
             </div>
             
-            <!-- Pagination (Static representation) -->
+            <!-- Pagination Placeholder -->
             <div class="col-span-full flex justify-center mt-10">
               <div class="flex items-center space-x-2">
                 <a href="#" class="px-4 py-2 text-sm font-medium border border-gray-300 rounded-full hover:bg-gray-100">&larr;</a>
@@ -303,33 +280,22 @@ onMounted(() => {
             </button>
         </div>
 
-        <!-- Category Filter (Mobile) -->
+        <!-- Category Filter -->
         <div class="mb-6">
             <h3 class="font-medium mb-3">Category</h3>
             <ul class="space-y-2 text-gray-600">
-              <li v-for="cat in categoriesWithAll" :key="cat._id">
+              <li v-for="cat in categoriesWithAll" :key="cat._id || 'all'">
                 <a 
                   href="#" 
-                  @click.prevent="selectCategory(cat._id)"
+                  @click.prevent="selectCategory(cat._id || 'All')"
                   :class="['text-base block py-1 hover:text-gray-900', { 'font-bold text-gray-900': selectedCategoryId === cat._id }]"
                 >
-                  {{ cat.name }}
+                  {{ cat.name }} ({{ cat.count }})
                 </a>
               </li>
             </ul>
         </div>
-
-        <!-- Color Filter (Static Placeholder) -->
-        <div class="mb-6">
-            <h3 class="font-medium mb-3">Color</h3>
-            <div class="flex flex-wrap gap-2">
-                <span class="w-8 h-8 rounded-full bg-black border border-gray-400 cursor-pointer"></span>
-                <span class="w-8 h-8 rounded-full bg-white border border-gray-400 cursor-pointer"></span>
-                <span class="w-8 h-8 rounded-full bg-neutral-500 cursor-pointer"></span>
-                <span class="w-8 h-8 rounded-full bg-stone-700 cursor-pointer"></span>
-            </div>
-        </div>
-
+        
         <button
           @click="closeSidebar"
           class="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold text-sm hover:bg-gray-700 transition-all duration-300 mt-6"
@@ -399,3 +365,4 @@ body {
   animation: slidein 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 </style>
+
