@@ -73,6 +73,31 @@ const login = async (credentials) => {
   }
 };
 
+const register = async (payload) => {
+  try {
+    const res = await fetch(API_URL + 'register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Registration failed');
+    }
+
+    const data = await res.json();
+    // Optionally auto-login after register if backend returns token/user
+    if (data && data.token) {
+      saveVendorUser(data);
+    }
+    return data;
+  } catch (err) {
+    console.error('Vendor register error', err);
+    throw err;
+  }
+};
+
 const logout = () => {
   removeVendorUser();
 };
@@ -128,6 +153,7 @@ const getCurrentUser = () => {
 
 const authService = {
   login,
+  register,
   logout,
   isAuthenticated,
   isVendor,
@@ -140,4 +166,4 @@ const authService = {
 };
 
 export default authService;
-export { login, logout, isAuthenticated, isVendor, getToken, getCurrentUser, updateProfile, requestPasswordReset, resetPassword, refreshToken };
+export { login, register, logout, isAuthenticated, isVendor, getToken, getCurrentUser, updateProfile, requestPasswordReset, resetPassword, refreshToken };

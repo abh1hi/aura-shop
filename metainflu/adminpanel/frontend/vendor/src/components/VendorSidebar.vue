@@ -46,7 +46,7 @@
           <li v-for="item in mainNavigation" :key="item.name" class="nav-item">
             <router-link 
               :to="item.to" 
-              class="nav-link"
+              class="nav-link group"
               :class="{ 'active': isActiveRoute(item.to) }"
               @click="handleNavClick"
             >
@@ -65,7 +65,7 @@
           <li v-for="item in productNavigation" :key="item.name" class="nav-item">
             <router-link 
               :to="item.to" 
-              class="nav-link"
+              class="nav-link group"
               :class="{ 'active': isActiveRoute(item.to) }"
               @click="handleNavClick"
             >
@@ -84,7 +84,7 @@
           <li v-for="item in orderNavigation" :key="item.name" class="nav-item">
             <router-link 
               :to="item.to" 
-              class="nav-link"
+              class="nav-link group"
               :class="{ 'active': isActiveRoute(item.to) }"
               @click="handleNavClick"
             >
@@ -103,7 +103,7 @@
           <li v-for="item in toolsNavigation" :key="item.name" class="nav-item">
             <router-link 
               :to="item.to" 
-              class="nav-link"
+              class="nav-link group"
               :class="{ 'active': isActiveRoute(item.to) }"
               @click="handleNavClick"
             >
@@ -375,7 +375,7 @@ export default {
 }
 
 .logo-link {
-  @apply flex items-center space-x-3 text-decoration-none;
+  @apply flex items-center space-x-3 no-underline;
 }
 
 .logo {
@@ -469,7 +469,7 @@ export default {
 }
 
 .nav-link {
-  @apply flex items-center px-3 py-3 text-sm font-medium text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 group;
+  @apply flex items-center px-3 py-3 text-sm font-medium text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-all duration-200;
 }
 
 .nav-link.active {
@@ -477,7 +477,11 @@ export default {
 }
 
 .nav-icon {
-  @apply h-5 w-5 mr-3 text-gray-500 group-hover:text-blue-500;
+  @apply h-5 w-5 mr-3 text-gray-500;
+}
+
+.nav-link:hover .nav-icon {
+  color: theme('colors.blue.500');
 }
 
 .nav-link.active .nav-icon {
