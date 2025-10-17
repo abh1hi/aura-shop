@@ -16,7 +16,8 @@ const arrayAttributeSchema = new mongoose.Schema({
 
 // Variant Schema (specific SKU-level differences)
 const variantSchema = new mongoose.Schema({
-  sku: { type: String, required: true, unique: true },
+  // Remove unique requirement to avoid DB-level duplicates for null/empty; uniqueness enforced via partial index
+  sku: { type: String, required: true },
   attributes: [attributeSchema],                  // e.g. {name: "Size", value: "L"}
   price: { type: Number, required: true },
   stock: { type: Number, required: true, default: 0 },
@@ -91,5 +92,11 @@ const productSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date },
 }, { timestamps: true });
+
+// Add a partial unique index on variants.sku so uniqueness applies only when a non-empty string exists
+productSchema.index(
+  { 'variants.sku': 1 },
+  { unique: true, partialFilterExpression: { 'variants.sku': { $exists: true, $type: 'string', $ne: '' } } }
+);
 
 module.exports = mongoose.model('Product', productSchema);
