@@ -1,14 +1,42 @@
 <template>
   <div
     class="product-card relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-400 ease-[0.4,0,0.2,1] cursor-pointer"
+    @touchstart="handleTouchStart"
+    @touchmove="handleTouchMove"
+    @touchend="handleTouchEnd"
   >
     <!-- Image Container -->
     <div class="relative group overflow-hidden">
+      <template v-if="product.images && product.images.length > 1">
+        <img
+          v-for="(image, index) in product.images"
+          :key="index"
+          :src="image.url"
+          :alt="product.name"
+          class="w-full h-80 object-cover transition-opacity duration-500 absolute inset-0"
+          :class="{ 'opacity-100': index === currentImageIndex, 'opacity-0': index !== currentImageIndex }"
+        />
+        <!-- Manual Controls -->
+        <div class="absolute inset-0 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <button @click.stop="prevImage" class="bg-black/30 text-white p-2 rounded-full ml-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button @click.stop="nextImage" class="bg-black/30 text-white p-2 rounded-full mr-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </template>
       <img
-        :src="product.imageUrl"
+        v-else-if="product.images && product.images.length > 0"
+        :src="product.images[0].url"
         :alt="product.name"
         class="w-full h-80 object-cover transition-transform duration-500 group-hover:scale-105"
       />
+
       <!-- Glassy overlay with action buttons -->
       <div
         class="absolute inset-0 bg-white/10 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col items-center justify-center gap-3"
@@ -31,6 +59,15 @@
         >
           View Details
         </button>
+      </div>
+        <!-- Slideshow Dots -->
+      <div v-if="product.images && product.images.length > 1" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+        <span
+          v-for="(image, index) in product.images"
+          :key="index"
+          class="w-2 h-2 rounded-full transition-colors"
+          :class="{ 'bg-white': index === currentImageIndex, 'bg-white/50': index !== currentImageIndex }"
+        ></span>
       </div>
     </div>
 
@@ -64,6 +101,41 @@ const router = useRouter();
 const isAdding = ref(false);
 const isAdded = ref(false);
 
+const currentImageIndex = ref(0);
+
+const nextImage = () => {
+  if (props.product.images && props.product.images.length > 1) {
+    currentImageIndex.value = (currentImageIndex.value + 1) % props.product.images.length;
+  }
+};
+
+const prevImage = () => {
+  if (props.product.images && props.product.images.length > 1) {
+    currentImageIndex.value = (currentImageIndex.value - 1 + props.product.images.length) % props.product.images.length;
+  }
+};
+
+let touchStartX = 0;
+let touchEndX = 0;
+
+const handleTouchStart = (e) => {
+  touchStartX = e.touches[0].clientX;
+};
+
+const handleTouchMove = (e) => {
+  touchEndX = e.touches[0].clientX;
+};
+
+const handleTouchEnd = () => {
+  if (touchStartX - touchEndX > 50) {
+    nextImage();
+  }
+  if (touchStartX - touchEndX < -50) {
+    prevImage();
+  }
+};
+
+
 const addToCart = async () => {
   isAdding.value = true;
   try {
@@ -82,7 +154,7 @@ const buyNow = () => {
 };
 
 const viewDetails = () => {
-  router.push({ name: 'ProductDetails', params: { id: props.product._id } });
+  router.push({ name: 'ProductDetail', params: { id: props.product._id } });
 };
 </script>
 

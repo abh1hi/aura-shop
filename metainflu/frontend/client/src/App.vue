@@ -2,7 +2,11 @@
   <div id="app">
     <Navbar />
     <main class="main-content">
-      <router-view></router-view>
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </main>
     <Footer />
   </div>
@@ -101,6 +105,16 @@ body {
     font-weight: 600;
     color: var(--text-color);
     margin: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 @media (max-width: 992px) {

@@ -76,7 +76,7 @@ const createProduct = asyncHandler(async (req, res) => {
   const product = new Product({
     name,
     description,
-    imageUrl,
+    images: [{ url: imageUrl, altText: name, position: 1 }],
     categories: [categoryIdToUse],
     user: req.user._id,
     variants: [
@@ -108,13 +108,13 @@ const updateProduct = asyncHandler(async (req, res) => {
     throw new Error('Product not found');
   }
 
-  // Security Check: Only the owner (vendor) or an admin can update the product
+  // Security Check
   if (product.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
     res.status(403);
     throw new Error('Not authorized to update this product');
   }
 
-  // Whitelist of fields that can be updated
+  // Update whitelisted fields
   const allowedUpdates = [
     'name', 'description', 'brand', 'modelNumber', 'gtin', 'categories', 
     'attributes', 'arrayAttributes', 'variants', 'images', 'weight', 
@@ -125,17 +125,16 @@ const updateProduct = asyncHandler(async (req, res) => {
     'regionOfOrigin', 'tags'
   ];
 
-  const filteredUpdateData = {};
   Object.keys(updateData).forEach(key => {
     if (allowedUpdates.includes(key)) {
-      filteredUpdateData[key] = updateData[key];
+      product[key] = updateData[key];
     }
   });
 
   // Synchronize variant images from the main images list
-  if (filteredUpdateData.images && filteredUpdateData.variants) {
+  if (product.images && product.variants) {
     const skuToVariantMap = new Map();
-    filteredUpdateData.variants.forEach(variant => {
+    product.variants.forEach(variant => {
       if (variant.sku) {
         skuToVariantMap.set(variant.sku, variant);
       }
@@ -143,23 +142,23 @@ const updateProduct = asyncHandler(async (req, res) => {
       variant.images = []; 
     });
 
-    filteredUpdateData.images.forEach(image => {
+    product.images.forEach(image => {
       if (image.variantSku && skuToVariantMap.has(image.variantSku)) {
         const variant = skuToVariantMap.get(image.variantSku);
-        if (variant && variant.images) {
+        if (variant) {
+          if (!variant.images) {
+            variant.images = [];
+          }
           variant.images.push(image.url);
         }
       }
     });
   }
 
-  const updatedProduct = await Product.findByIdAndUpdate(
-    productId,
-    { $set: filteredUpdateData },
-    { new: true, runValidators: true }
-  ).populate('categories', 'name');
+  const updatedProduct = await product.save();
+  const populatedProduct = await Product.findById(updatedProduct._id).populate('categories', 'name');
 
-  res.json(updatedProduct);
+  res.json(populatedProduct);
 });
 
 // @desc    Delete a product

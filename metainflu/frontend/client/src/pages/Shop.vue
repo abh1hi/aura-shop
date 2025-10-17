@@ -153,13 +153,20 @@ const productsWithVariants = computed(() => {
   allProducts.value.forEach(product => {
     if (product.variants && product.variants.length > 0) {
       product.variants.forEach(variant => {
+        let imageUrl = 'https://via.placeholder.com/300';
+        if (variant.images && variant.images.length > 0) {
+          imageUrl = variant.images[0];
+        } else if (product.images && product.images.length > 0) {
+          imageUrl = product.images[0].url;
+        }
+
         expanded.push({
           ...product,
           key: `${product._id}-${variant.sku || variant._id}`,
           price: variant.price,
           stock: variant.stock,
           sku: variant.sku,
-          imageUrl: (variant.images && variant.images.length > 0) ? variant.images[0] : (product.images && product.images.length > 0 ? product.images[0].url : 'https://via.placeholder.com/300'),
+          images: [{ url: imageUrl }],
           variantAttributes: variant.attributes,
         });
       });
@@ -169,7 +176,7 @@ const productsWithVariants = computed(() => {
         ...product,
         key: product._id,
         price: product.price || 0,
-        imageUrl: (product.images && product.images.length > 0) ? product.images[0].url : 'https://via.placeholder.com/300',
+        images: product.images,
       });
     }
   });

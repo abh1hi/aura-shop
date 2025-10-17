@@ -9,7 +9,7 @@
       <div class="hero-content">
         <h1>Effortless. Elevated. <span class="brand-gradient">AURA.</span></h1>
         <p>Luxury minimalism for the new generation — consciously crafted, timelessly styled.</p>
-        <a href="#" class="cta-button">Explore Collection</a>
+        <router-link to="/shop" class="cta-button">Explore Collection</router-link>
       </div>
       <div class="scroll-indicator">Scroll ↓</div>
     </section>
@@ -86,15 +86,42 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import ProductCard from '../components/ProductCard.vue'
+import { ref, onMounted, computed } from 'vue';
+import ProductCard from '../components/ProductCard.vue';
+import productService from '../services/productService';
 
-const trendingProducts = ref([
-  { id: 1, name: 'Wool Oversized Coat', price: 190, imageUrl: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?q=80&w=1887' },
-  { id: 2, name: 'Ribbed Knit Set', price: 140, imageUrl: 'https://images.unsplash.com/photo-1592878895601-fd4fdde3435a?q=80&w=1887' },
-  { id: 3, name: 'Neutral Cargo Pants', price: 99, imageUrl: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1887' },
-  { id: 4, name: 'Luxe Graphic Tee', price: 59, imageUrl: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?q=80&w=1887' }
-])
+const products = ref([]);
+
+onMounted(async () => {
+  try {
+    products.value = await productService.getProducts();
+  } catch (error) {
+    console.error('Failed to fetch products:', error);
+  }
+});
+
+const trendingProducts = computed(() => {
+  const allVariants = [];
+  products.value.forEach(product => {
+    if (product.variants && product.variants.length > 0) {
+      product.variants.forEach(variant => {
+        allVariants.push({
+          _id: product._id,
+          id: `${product._id}-${variant.sku}`,
+          name: product.name,
+          price: variant.price,
+          images: variant.images.length > 0 ? [{ url: variant.images[0] }] : product.images,
+        });
+      });
+    } else {
+      allVariants.push({
+        ...product,
+        id: product._id,
+      });
+    }
+  });
+  return allVariants;
+});
 </script>
 
 <style scoped>
@@ -162,6 +189,7 @@ const trendingProducts = ref([
 .cta-button:hover {
   background: var(--accent);
   color: #fff;
+  transform: scale(1.05);
 }
 .scroll-indicator {
   position: absolute;
@@ -248,7 +276,7 @@ const trendingProducts = ref([
   color: #555;
 }
 
-/* MOODBOARD */
+/* MOODBOARD / COMMUNITY */
 .moodboard {
   padding: 5rem 1rem;
   text-align: center;
