@@ -1,264 +1,133 @@
 /*
-  File: metainflu/adminpanel/frontend/vendor/src/services/authService.js
-  Purpose: This service handles authentication for VENDORS. It provides
-  login, logout, and authentication verification for vendor accounts.
+  Vendor auth service for the vendor/admin panel.
+  Exposes helper functions used by the vendor panel router and components:
+  - login, logout
+  - isAuthenticated, isVendor
+  - getToken, getCurrentUser
+  - refreshToken, requestPasswordReset, resetPassword, updateProfile
+
+  This implementation stores the auth token and user info in localStorage
+  under the key 'vendorUser' (to avoid clashing with client/admin keys).
 */
 
-const API_URL = 'http://localhost:5000/api/auth/vendor/';
-const TOKEN_KEY = 'vendorToken';
-const USER_KEY = 'vendorUser';
+const API_URL = 'http://localhost:5000/api/auth/';
 
-/**
- * Logs in a vendor.
- * @param {object} credentials - The vendor's credentials (email, password).
- * @returns {Promise<object>} - A promise resolving with vendor data.
- */
-const login = async (credentials) => {
+const VENDOR_STORAGE_KEY = 'vendorUser';
+
+const saveVendorUser = (data) => {
   try {
-    const response = await fetch(API_URL + 'login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to log in');
-    }
-
-    const data = await response.json();
-    if (data.token) {
-      localStorage.setItem(TOKEN_KEY, data.token);
-      localStorage.setItem(USER_KEY, JSON.stringify(data.vendor));
-    }
-    return data;
-  } catch (error) {
-    console.error('Vendor login failed:', error);
-    throw error;
+    localStorage.setItem(VENDOR_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Failed saving vendor user to localStorage', e);
   }
 };
 
-/**
- * Registers a new vendor account.
- * @param {object} vendorData - The vendor registration data.
- * @returns {Promise<object>} - A promise resolving with registration result.
- */
-const register = async (vendorData) => {
+const removeVendorUser = () => {
+  localStorage.removeItem(VENDOR_STORAGE_KEY);
+};
+
+const getVendorUser = () => {
   try {
-    const response = await fetch(API_URL + 'register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(vendorData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to register');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Vendor registration failed:', error);
-    throw error;
-  }
-};
-
-/**
- * Logs out the vendor by clearing stored data.
- */
-const logout = () => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-};
-
-/**
- * Checks if the vendor is currently authenticated.
- * @returns {Promise<boolean>} - Promise resolving to authentication status.
- */
-const isAuthenticated = async () => {
-  const token = getToken();
-  if (!token) return false;
-  
-  try {
-    const response = await fetch(API_URL + 'verify', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    return response.ok;
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    return false;
-  }
-};
-
-/**
- * Checks if the current user has vendor role.
- * @returns {Promise<boolean>} - Promise resolving to vendor status.
- */
-const isVendor = async () => {
-  const user = getCurrentUser();
-  if (!user) return false;
-  
-  return user.role === 'vendor' || user.userType === 'vendor';
-};
-
-/**
- * Gets the current authentication token.
- * @returns {string|null} - The authentication token or null.
- */
-const getToken = () => {
-  return localStorage.getItem(TOKEN_KEY);
-};
-
-/**
- * Gets the current authenticated vendor data.
- * @returns {object|null} - The vendor object or null.
- */
-const getCurrentUser = () => {
-  const userStr = localStorage.getItem(USER_KEY);
-  if (!userStr) return null;
-  
-  try {
-    return JSON.parse(userStr);
-  } catch (error) {
-    console.error('Failed to parse user data:', error);
+    const raw = localStorage.getItem(VENDOR_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
     return null;
   }
 };
 
-/**
- * Updates the current vendor profile.
- * @param {object} profileData - The updated profile data.
- * @returns {Promise<object>} - Promise resolving with updated profile.
- */
-const updateProfile = async (profileData) => {
+const getToken = () => {
+  const u = getVendorUser();
+  return u && u.token ? u.token : null;
+};
+
+const isAuthenticated = async () => {
+  // Quick client-side check based on localStorage; real validation could ping an endpoint
+  return !!getToken();
+};
+
+const isVendor = async () => {
+  const u = getVendorUser();
+  return !!(u && (u.role === 'vendor' || u.role === 'admin'));
+};
+
+const login = async (credentials) => {
+  try {
+    const res = await fetch(API_URL + 'login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Login failed');
+    }
+
+    const data = await res.json();
+    // Expecting { token, user }
+    saveVendorUser(data);
+    return data;
+  } catch (err) {
+    console.error('Vendor login error', err);
+    throw err;
+  }
+};
+
+const logout = () => {
+  removeVendorUser();
+};
+
+// Optional helpers for profile & password flows
+const updateProfile = async (payload) => {
   const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-  
-  try {
-    const response = await fetch(API_URL + 'profile', {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(profileData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to update profile');
-    }
-
-    const updatedUser = await response.json();
-    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
-    return updatedUser;
-  } catch (error) {
-    console.error('Profile update failed:', error);
-    throw error;
-  }
+  const res = await fetch(API_URL + 'profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  return await res.json();
 };
 
-/**
- * Requests a password reset for vendor account.
- * @param {string} email - The vendor's email address.
- * @returns {Promise<object>} - Promise resolving with reset result.
- */
 const requestPasswordReset = async (email) => {
-  try {
-    const response = await fetch(API_URL + 'forgot-password', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to send reset email');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Password reset request failed:', error);
-    throw error;
-  }
+  const res = await fetch(API_URL + 'request-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  return await res.json();
 };
 
-/**
- * Resets the vendor password using a reset token.
- * @param {string} token - The password reset token.
- * @param {string} newPassword - The new password.
- * @returns {Promise<object>} - Promise resolving with reset result.
- */
 const resetPassword = async (token, newPassword) => {
-  try {
-    const response = await fetch(API_URL + 'reset-password', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token, password: newPassword }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to reset password');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Password reset failed:', error);
-    throw error;
-  }
+  const res = await fetch(API_URL + `reset-password/${token}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: newPassword }),
+  });
+  return await res.json();
 };
 
-/**
- * Refreshes the authentication token.
- * @returns {Promise<string>} - Promise resolving with new token.
- */
 const refreshToken = async () => {
   const token = getToken();
-  if (!token) throw new Error('No token to refresh');
-  
-  try {
-    const response = await fetch(API_URL + 'refresh', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to refresh token');
-    }
-
-    const data = await response.json();
-    if (data.token) {
-      localStorage.setItem(TOKEN_KEY, data.token);
-    }
-    return data.token;
-  } catch (error) {
-    console.error('Token refresh failed:', error);
-    logout(); // Clear invalid token
-    throw error;
+  if (!token) throw new Error('No token');
+  const res = await fetch(API_URL + 'refresh', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (data.token) {
+    const user = getVendorUser() || {};
+    saveVendorUser({ ...user, token: data.token });
   }
+  return data;
 };
 
-// Create the authService object with all methods
+const getCurrentUser = () => {
+  const u = getVendorUser();
+  return u && u.user ? u.user : u;
+};
+
 const authService = {
   login,
-  register,
   logout,
   isAuthenticated,
   isVendor,
@@ -267,22 +136,8 @@ const authService = {
   updateProfile,
   requestPasswordReset,
   resetPassword,
-  refreshToken
-};
-
-// Export both named exports and default export for flexibility
-export {
-  login,
-  register,
-  logout,
-  isAuthenticated,
-  isVendor,
-  getToken,
-  getCurrentUser,
-  updateProfile,
-  requestPasswordReset,
-  resetPassword,
-  refreshToken
+  refreshToken,
 };
 
 export default authService;
+export { login, logout, isAuthenticated, isVendor, getToken, getCurrentUser, updateProfile, requestPasswordReset, resetPassword, refreshToken };

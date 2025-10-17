@@ -182,63 +182,49 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   // Set page title
   document.title = to.meta.title ? `${to.meta.title} - Aura Shop Vendor` : 'Aura Shop Vendor Panel';
-  
-  // Check authentication requirement
-  if (to.meta.requiresAuth) {
-    try {
+
+  try {
+    // Check authentication requirement
+    if (to.meta.requiresAuth) {
       const isAuthenticated = await authService.isAuthenticated();
       const isVendor = await authService.isVendor();
-      
+
       if (!isAuthenticated) {
-        // Redirect to login if not authenticated
-        next({ 
-          name: 'Login', 
-          query: { redirect: to.fullPath } 
-        });
+        next({ name: 'Login', query: { redirect: to.fullPath } });
         return;
       }
-      
+
       if (!isVendor) {
-        // Redirect to landing page if not a vendor
-        next({ 
-          name: 'VendorLanding'
-        });
+        next({ name: 'VendorLanding' });
         return;
       }
-    } catch (error) {
-      console.error('Authentication check failed:', error);
-      next({ name: 'Login' });
-      return;
     }
-  }
-  
-  // Redirect authenticated users away from auth pages
-  if (['Login', 'VendorRegister', 'VendorLanding'].includes(to.name)) {
-    try {
+
+    // Redirect authenticated users away from auth pages
+    if (['Login', 'VendorRegister', 'VendorLanding'].includes(to.name)) {
       const isAuthenticated = await authService.isAuthenticated();
       if (isAuthenticated) {
         next({ name: 'Dashboard' });
         return;
       }
-    } catch (error) {
-      // If auth check fails, allow access to auth pages
     }
-  }
-  
-  // Redirect root path to landing for non-authenticated users
-  if (to.path === '/' && to.name === 'Dashboard') {
-    try {
+
+    // Redirect root path to landing for non-authenticated users
+    if (to.path === '/' && to.name === 'Dashboard') {
       const isAuthenticated = await authService.isAuthenticated();
       if (!isAuthenticated) {
         next({ name: 'VendorLanding' });
         return;
       }
-    } catch (error) {
-      next({ name: 'VendorLanding' });
+    }
+  } catch (err) {
+    console.error('Auth guard error:', err);
+    if (to.meta.requiresAuth) {
+      next({ name: 'Login' });
       return;
     }
   }
-  
+
   next();
 });
 
@@ -251,7 +237,7 @@ router.afterEach((to, from) => {
       page_title: to.meta.title
     });
   }
-  
+
   // Update breadcrumbs
   updateBreadcrumbs(to);
 });
@@ -259,13 +245,13 @@ router.afterEach((to, from) => {
 // Helper function to update breadcrumbs
 function updateBreadcrumbs(route) {
   const breadcrumbs = [];
-  
+
   // Add home/dashboard
   breadcrumbs.push({
     text: 'Dashboard',
     to: { name: 'Dashboard' }
   });
-  
+
   // Add parent route if exists
   if (route.meta.parent) {
     const parentRoute = routes.find(r => r.name === route.meta.parent);
@@ -276,7 +262,7 @@ function updateBreadcrumbs(route) {
       });
     }
   }
-  
+
   // Add current route (if not dashboard)
   if (route.name !== 'Dashboard') {
     breadcrumbs.push({
@@ -284,7 +270,7 @@ function updateBreadcrumbs(route) {
       to: null // Current page, no link
     });
   }
-  
+
   // Store breadcrumbs in router for components to access
   router.currentBreadcrumbs = breadcrumbs;
 }
