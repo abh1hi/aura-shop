@@ -101,7 +101,8 @@ const getVendorDashboardStats = asyncHandler(async (req, res) => {
 // @route   GET /api/vendor/products
 // @access  Private/Vendor
 const getVendorProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find({ user: req.user._id }).populate('category');
+  // Populate the correct path from schema: 'categories' (array), select only name
+  const products = await Product.find({ user: req.user._id }).populate('categories', 'name');
   res.json(products);
 });
 
@@ -154,11 +155,8 @@ const updateOrderItemToShipped = asyncHandler(async (req, res) => {
   const item = order.items.find(item => item.product.toString() === productId);
 
   if (item) {
-    // Logic to mark the specific item as shipped (or the order if all items are shipped)
-    // NOTE: This logic should be adapted to the Order model's actual status tracking needs.
-    // Since the current Order model only has one `status`, we'll simplify and update the order status.
-    
-    order.status = 'shipped'; // Simplified update for the whole order
+    // Simplified update for the whole order
+    order.status = 'shipped'; 
     
     await order.save();
     res.json({ message: 'Order item marked as shipped (order status updated to shipped).', order });

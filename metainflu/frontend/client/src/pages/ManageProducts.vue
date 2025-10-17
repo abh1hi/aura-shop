@@ -26,6 +26,10 @@
           <p class="text-sm text-gray-500" :class="{'text-red-500': product.stock < 10, 'text-green-600': product.stock >= 10}">
             {{ product.stock || 0 }} in stock
           </p>
+          <!-- Optional: Show first category name if available -->
+          <p v-if="product.categories && product.categories.length" class="text-xs text-gray-400 mt-1">
+            Category: {{ (product.categories[0].name || product.categories[0]) }}
+          </p>
           <div class="mt-4 flex justify-end gap-2">
             <button @click="startEdit(product)" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Edit</button>
             <button @click="confirmDelete(product)" class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600" :disabled="deletingId === product._id">
@@ -57,7 +61,8 @@ const fetchProducts = async () => {
     products.value = response.map(p => ({ 
       ...p, 
       stock: p.stock || 0,
-      category: p.category ? (p.category._id || p.category) : '',
+      // Normalize categories to array and drop legacy single-category mapping
+      categories: Array.isArray(p.categories) ? p.categories : (p.category ? [p.category] : []),
     }));
   } catch (err) {
     console.error('Error fetching vendor products:', err);
