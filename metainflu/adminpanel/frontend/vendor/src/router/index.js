@@ -18,6 +18,7 @@ import OrderFulfillment from '../pages/OrderFulfillment.vue';
 import Invoices from '../pages/Invoices.vue';
 import ViewSales from '../pages/ViewSales.vue';
 import Account from '../pages/Account.vue';
+import Notifications from '../pages/Notifications.vue';
 
 // Define routes
 const routes = [
@@ -122,6 +123,16 @@ const routes = [
       title: 'Account Settings',
       requiresAuth: true,
       breadcrumb: 'Account'
+    }
+  },
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: Notifications,
+    meta: { 
+      title: 'Notifications',
+      requiresAuth: true,
+      breadcrumb: 'Notifications'
     }
   },
   {
