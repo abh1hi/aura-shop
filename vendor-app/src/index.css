@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+
+.ios-card { background: theme('colors.iosCard'); border-radius: theme('borderRadius.xl'); box-shadow: theme('boxShadow.ios'); }
+.ios-title { color: theme('colors.iosText'); font-weight: 700; letter-spacing: -0.01em; }
+.ios-muted { color: theme('colors.iosMuted'); }
+.ios-button { background: theme('colors.iosBlue'); color: white; border-radius: 12px; padding: 10px 14px; font-weight: 600; }
+.ios-input { background: #fff; border-radius: 12px; padding: 10px 12px; border: 1px solid #e5e7eb; }

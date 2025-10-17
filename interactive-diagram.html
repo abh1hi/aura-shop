@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aura Shop - Interactive Architecture Diagram (Fixed)</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; margin: 0; padding: 16px; background: #f2f4f7; }
+    .container { max-width: 1280px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(16,24,40,.08); overflow: hidden; }
+    .header { background: #0f172a; color: white; padding: 20px 24px; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+    .header p { margin: 6px 0 0 0; opacity: .85; font-size: 13px; }
+    .controls { display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: #fcfcfd; border-bottom: 1px solid #eef2f7; flex-wrap: wrap; }
+    .controls .control-item { display: flex; gap: 8px; align-items: center; }
+    select, button { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; font-size: 13px; }
+    button { background: #2563eb; color: white; border: none; cursor: pointer; }
+    button.secondary { background: #111827; }
+    #graph { width: 100%; height: 760px; background: #ffffff; }
+    .node { cursor: grab; }
+    .node:active { cursor: grabbing; }
+    .node circle { transition: r .15s ease; }
+    .node-frontend { fill: #16a34a; }
+    .node-backend { fill: #2563eb; }
+    .node-database { fill: #f59e0b; }
+    .node-route { fill: #7c3aed; }
+    .node-model { fill: #ef4444; }
+    .node-middleware { fill: #92400e; }
+    .node-component { fill: #06b6d4; }
+    .node-service { fill: #334155; }
+    .link { stroke: #cbd5e1; stroke-width: 1.75px; }
+    .tooltip { position: absolute; background: #0b1220; color: white; padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.35; max-width: 320px; pointer-events: none; opacity: 0; transform: translateY(-6px); transition: opacity .12s ease, transform .12s ease; box-shadow: 0 8px 24px rgba(2,6,23,.35); }
+    .tooltip h3 { margin: 0 0 6px 0; color: #34d399; font-size: 13px; }
+    .legend { padding: 12px 16px; background: #fcfcfd; border-top: 1px solid #eef2f7; display: flex; gap: 16px; flex-wrap: wrap; }
+    .legend-item { display: inline-flex; align-items: center; gap: 8px; color: #334155; font-size: 12px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 50%; }
+    .stats { display: flex; gap: 24px; padding: 12px 16px; background: #fff; border-top: 1px solid #eef2f7; font-size: 12px; color: #475569; }
+    .pill { padding: 4px 8px; background: #f1f5f9; border-radius: 999px; }
+    .banner { display:none; padding:10px 12px; background:#fff7ed; color:#9a3412; border-top:1px solid #fed7aa; font-size:12px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🌟 Aura Shop Architecture</h1>
+    <p>Fixed: Restored nodes/edges, added runtime checks, and stabilized physics and hover</p>
+  </div>
+
+  <div class="controls">
+    <div class="control-item">
+      <label>Layout</label>
+      <select id="layoutSelect">
+        <option value="force">Force</option>
+        <option value="hierarchy">Hierarchy</option>
+        <option value="grid">Grid</option>
+      </select>
+    </div>
+    <div class="control-item">
+      <label>Filter</label>
+      <select id="filterSelect">
+        <option value="all">All</option>
+        <option value="backend">Backend</option>
+        <option value="frontend">Frontend</option>
+        <option value="api">API</option>
+      </select>
+    </div>
+    <div class="control-item">
+      <button id="freezeBtn" class="secondary">Freeze</button>
+      <button id="unfreezeBtn">Unfreeze</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </div>
+
+  <svg id="graph"></svg>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-color node-frontend"></div>Frontend</div>
+    <div class="legend-item"><div class="legend-color node-backend"></div>Backend</div>
+    <div class="legend-item"><div class="legend-color node-route"></div>Routes</div>
+    <div class="legend-item"><div class="legend-color node-middleware"></div>Middleware</div>
+    <div class="legend-item"><div class="legend-color node-model"></div>Models</div>
+    <div class="legend-item"><div class="legend-color node-database"></div>Database</div>
+    <div class="legend-item"><div class="legend-color node-component"></div>Components</div>
+    <div class="legend-item"><div class="legend-color node-service"></div>Services</div>
+  </div>
+
+  <div class="stats">
+    <div>Nodes: <span class="pill" id="nodeCount">0</span></div>
+    <div>Links: <span class="pill" id="linkCount">0</span></div>
+    <div>Layers: <span class="pill" id="layerCount">0</span></div>
+    <div>Mode: <span class="pill" id="mode">Force</span></div>
+  </div>
+  <div id="banner" class="banner">⚠️ Graph data is empty. Please reload. If this persists, check console for errors.</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// FULL graphData restored (no placeholders)
+const graphData = {
+  nodes: [
+    { id: "vue-app", name: "Vue App", type: "frontend", layer: "presentation", description: "Main Vue.js application", details: "Vue 3 + Vite\nSPA routing" },
+    { id: "vue-router", name: "Vue Router", type: "frontend", layer: "presentation", description: "SPA routing", details: "Guards & transitions" },
+    { id: "auth-pages", name: "Auth Pages", type: "component", layer: "presentation", description: "Login/Register", details: "Auth UI" },
+    { id: "shop-pages", name: "Shop Pages", type: "component", layer: "presentation", description: "Catalog/Cart/Checkout", details: "Shop flows" },
+    { id: "admin-pages", name: "Admin Panel", type: "component", layer: "presentation", description: "Admin UI", details: "Manage products/users" },
+    { id: "auth-service", name: "Auth Service", type: "service", layer: "service", description: "Auth client", details: "JWT, headers" },
+    { id: "api-service", name: "API Service", type: "service", layer: "service", description: "HTTP client", details: "Fetch/Axios" },
+    { id: "express-server", name: "Express Server", type: "backend", layer: "application", description: "Node backend", details: "Port 5000, CORS" },
+    { id: "auth-routes", name: "Auth Routes", type: "route", layer: "application", description: "Auth endpoints", details: "register/login/admin" },
+    { id: "product-routes", name: "Product Routes", type: "route", layer: "application", description: "Products API", details: "CRUD, filter" },
+    { id: "order-routes", name: "Order Routes", type: "route", layer: "application", description: "Orders API", details: "place/history" },
+    { id: "admin-routes", name: "Admin Routes", type: "route", layer: "application", description: "Admin API", details: "admin guard" },
+    { id: "vendor-routes", name: "Vendor Routes", type: "route", layer: "application", description: "Vendor API", details: "vendor guard" },
+    { id: "auth-middleware", name: "Auth Middleware", type: "middleware", layer: "security", description: "JWT/role checks", details: "protect/admin/vendor" },
+    { id: "error-middleware", name: "Error Middleware", type: "middleware", layer: "security", description: "Error handler", details: "standard responses" },
+    { id: "mongodb", name: "MongoDB", type: "database", layer: "data", description: "Database", details: "Mongoose" },
+    { id: "user-model", name: "User Model", type: "model", layer: "data", description: "User schema", details: "name/email/role" },
+    { id: "product-model", name: "Product Model", type: "model", layer: "data", description: "Product schema", details: "pricing/category" },
+    { id: "order-model", name: "Order Model", type: "model", layer: "data", description: "Order schema", details: "items/status" },
+    { id: "cart-model", name: "Cart Model", type: "model", layer: "data", description: "Cart schema", details: "user items" }
+  ],
+  links: [
+    { source: "vue-app", target: "vue-router" },
+    { source: "vue-router", target: "auth-pages" },
+    { source: "vue-router", target: "shop-pages" },
+    { source: "vue-router", target: "admin-pages" },
+    { source: "auth-pages", target: "auth-service" },
+    { source: "shop-pages", target: "api-service" },
+    { source: "admin-pages", target: "api-service" },
+    { source: "auth-service", target: "express-server" },
+    { source: "api-service", target: "express-server" },
+    { source: "express-server", target: "auth-routes" },
+    { source: "express-server", target: "product-routes" },
+    { source: "express-server", target: "order-routes" },
+    { source: "express-server", target: "admin-routes" },
+    { source: "express-server", target: "vendor-routes" },
+    { source: "admin-routes", target: "auth-middleware" },
+    { source: "vendor-routes", target: "auth-middleware" },
+    { source: "express-server", target: "error-middleware" },
+    { source: "auth-routes", target: "user-model" },
+    { source: "product-routes", target: "product-model" },
+    { source: "order-routes", target: "order-model" },
+    { source: "admin-routes", target: "user-model" },
+    { source: "admin-routes", target: "product-model" },
+    { source: "vendor-routes", target: "product-model" },
+    { source: "user-model", target: "mongodb" },
+    { source: "product-model", target: "mongodb" },
+    { source: "order-model", target: "mongodb" },
+    { source: "cart-model", target: "mongodb" }
+  ]
+};
+
+// Runtime guard: show banner if empty
+(function validate(){
+  const banner = document.getElementById('banner');
+  try {
+    const ok = graphData && Array.isArray(graphData.nodes) && graphData.nodes.length && Array.isArray(graphData.links);
+    if (!ok) { banner.style.display='block'; console.error('graphData invalid', graphData); }
+  } catch (e) { banner.style.display='block'; console.error('graphData error', e); }
+})();
+
+const width = 1260, height = 760;
+const svg = d3.select('#graph').attr('width', width).attr('height', height);
+const g = svg.append('g');
+const zoom = d3.zoom().scaleExtent([0.3, 3]).on('zoom', (e)=> g.attr('transform', e.transform));
+svg.call(zoom);
+
+// Forces (stable)
+const sim = d3.forceSimulation(graphData.nodes)
+  .force('link', d3.forceLink(graphData.links).id(d=>d.id).distance(120).strength(0.7))
+  .force('charge', d3.forceManyBody().strength(-180))
+  .force('center', d3.forceCenter(width/2, height/2))
+  .force('collision', d3.forceCollide().radius(28).strength(0.9));
+
+// Pre-settle to avoid bounce
+let settleTicks = 120; sim.alpha(1); for (let i=0; i<settleTicks; i++) sim.tick(); sim.alphaTarget(0).alpha(0.1).restart();
+
+// Links
+const link = g.append('g').selectAll('line').data(graphData.links).enter().append('line').attr('class','link').attr('opacity',0.55);
+
+// Nodes
+const node = g.append('g').selectAll('g').data(graphData.nodes).enter().append('g').attr('class','node')
+  .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
+node.append('circle').attr('r', 16).attr('class', d=>`node-${d.type}`);
+node.append('text').attr('dy', 26).attr('text-anchor','middle').style('font-size','11px').style('fill','#0f172a').text(d=>d.name);
+
+// Tooltip (click-to-freeze)
+const tooltip = d3.select('#tooltip');
+let frozen = false;
+node.on('mouseenter', function(e,d){ if(frozen) return; showTip(e,d); d3.select(this).select('circle').transition().duration(120).attr('r',20); })
+    .on('mousemove', function(e){ if(!frozen) positionTip(e); })
+    .on('mouseleave', function(){ if(!frozen) hideTip(); d3.select(this).select('circle').transition().duration(120).attr('r',16); })
+    .on('click', function(e,d){ frozen = !frozen; if(frozen){ showTip(e,d); } else { hideTip(); } });
+
+function showTip(e,d){ tooltip.style('opacity',1).style('transform','translateY(0)').html(`
+  <h3>${d.name}</h3>
+  <div><b>Type:</b> ${d.type}</div>
+  <div><b>Layer:</b> ${d.layer}</div>
+  <div style="margin-top:6px">${(d.description||'')}</div>
+  <div style="opacity:.8;margin-top:4px;white-space:pre-line">${(d.details||'')}</div>
+`); positionTip(e); }
+function positionTip(e){ tooltip.style('left',(e.pageX+12)+'px').style('top',(e.pageY-12)+'px'); }
+function hideTip(){ tooltip.style('opacity',0).style('transform','translateY(-6px)'); }
+
+// Tick
+sim.on('tick', ()=>{
+  link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+  node.attr('transform', d=>`translate(${d.x},${d.y})`);
+});
+
+// Drag
+function dragstarted(event,d){ if(!event.active) sim.alphaTarget(0.05).restart(); d.fx=d.x; d.fy=d.y; }
+function dragged(event,d){ d.fx=event.x; d.fy=event.y; }
+function dragended(event,d){ if(!event.active) sim.alphaTarget(0); if(!frozen){ d.fx=null; d.fy=null; } }
+
+// Layouts
+const layoutSelect=document.getElementById('layoutSelect'); layoutSelect.addEventListener('change',()=>applyLayout(layoutSelect.value));
+function applyLayout(mode){ document.getElementById('mode').textContent=mode.charAt(0).toUpperCase()+mode.slice(1);
+  if(mode==='hierarchy'){ const layers=['presentation','service','application','security','data']; sim.force('x', d3.forceX().x(d=>(layers.indexOf(d.layer)+1)*(width/6)).strength(1)); sim.force('y', d3.forceY(height/2).strength(0.05)); }
+  else if(mode==='grid'){ const cols=5, gapX=width/(cols+1), gapY=130; sim.force('x', d3.forceX().x((d,i)=>((i%cols)+1)*gapX).strength(1)); sim.force('y', d3.forceY().y((d,i)=>(Math.floor(i/cols)+1)*gapY).strength(1)); }
+  else { sim.force('x', null); sim.force('y', null); sim.force('center', d3.forceCenter(width/2, height/2)); }
+  sim.alpha(0.5).restart(); }
+
+// Filters (never fully hide)
+const filterSelect=document.getElementById('filterSelect'); filterSelect.addEventListener('change',()=>applyFilter(filterSelect.value));
+function applyFilter(filter){ node.style('opacity', d=>{
+    if(filter==='backend') return ['backend','route','middleware','model','database'].includes(d.type)?1:0.2;
+    if(filter==='frontend') return ['frontend','component','service'].includes(d.type)?1:0.2;
+    if(filter==='api') return ['route','backend','service'].includes(d.type)?1:0.2;
+    return 1;
+  });
+  link.style('opacity', d=>{
+    const show = (types)=> types.includes(d.source.type) && types.includes(d.target.type);
+    if(filter==='backend') return show(['backend','route','middleware','model','database'])?0.55:0.15;
+    if(filter==='frontend') return show(['frontend','component','service'])?0.55:0.15;
+    if(filter==='api') return show(['route','backend','service'])?0.55:0.15;
+    return 0.55;
+  });
+}
+
+// Freeze/Unfreeze/Reset
+document.getElementById('freezeBtn').addEventListener('click', ()=>{ graphData.nodes.forEach(n=>{ n.fx=n.x; n.fy=n.y; }); sim.alphaTarget(0).stop(); });
+document.getElementById('unfreezeBtn').addEventListener('click', ()=>{ graphData.nodes.forEach(n=>{ n.fx=null; n.fy=null; }); sim.alpha(0.6).restart(); });
+document.getElementById('resetBtn').addEventListener('click', ()=>{ svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity); applyLayout('force'); sim.alpha(0.8).restart(); });
+
+// Stats
+function updateStats(){ document.getElementById('nodeCount').textContent=graphData.nodes.length; document.getElementById('linkCount').textContent=graphData.links.length; document.getElementById('layerCount').textContent=new Set(graphData.nodes.map(n=>n.layer)).size; }
+updateStats();
+</script>
+</body>
+</html>
