@@ -1,12 +1,32 @@
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const asyncHandler = require('express-async-handler');
+const mongoose = require('mongoose'); // Import mongoose for ObjectId check
 
-// @desc    Fetch all products
+// @desc    Fetch all products, optionally filtered by category
 // @route   GET /api/products
 // @access  Public
 const getProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find({});
+  const categoryId = req.query.category; 
+
+  const filter = {};
+
+  // Check if a category filter was provided
+  if (categoryId && categoryId !== 'All') {
+    // Validate the ID format before querying the DB to prevent internal server errors
+    if (mongoose.Types.ObjectId.isValid(categoryId)) {
+        // Find products where the categories array contains the requested categoryId
+        filter.categories = categoryId; 
+    } else {
+        // If the ID is invalid, set a filter that returns nothing
+        res.status(400);
+        throw new Error('Invalid category ID format.');
+    }
+  }
+
+  // Execute the query, populating the first category's name for display
+  // Using .find(filter) applies the filter only if it has properties (which it won't if categoryId is null)
+  const products = await Product.find(filter).populate('categories', 'name'); 
   res.json(products);
 });
 
@@ -14,7 +34,8 @@ const getProducts = asyncHandler(async (req, res) => {
 // @route   GET /api/products/:id
 // @access  Public
 const getProductById = asyncHandler(async (req, res) => {
-  const product = await Product.findById(req.params.id);
+  // Populate category data when fetching a single product
+  const product = await Product.findById(req.params.id).populate('categories', 'name');
 
   if (product) {
     res.json(product);
@@ -30,34 +51,27 @@ const getProductById = asyncHandler(async (req, res) => {
 const createProduct = asyncHandler(async (req, res) => {
   const { name, price, description, imageUrl, stock, category: categoryId, newCategoryName } = req.body;
 
-  let category;
+  let categoryIdToUse;
 
   if (newCategoryName) {
-    // Vendor is proposing a new category
-    // Check if it already exists (case-insensitive)
+    // Vendor is proposing a new category (logic remains the same)
     const existingCategory = await Category.findOne({ name: { $regex: new RegExp(`^${newCategoryName}$`, 'i') } });
 
     if (existingCategory) {
-      // If it exists, use it, but we might want to check its status
-      if (existingCategory.status === 'approved') {
-        category = existingCategory._id;
-      } else {
-        // If it's pending, we can either use it or throw an error
-        // For now, let's use it, the product will be tied to a pending category
-        category = existingCategory._id;
-      }
+      // Use existing category ID
+      categoryIdToUse = existingCategory._id;
     } else {
-      // If it doesn't exist, create it with a 'pending' status
+      // Create new category with 'pending' status
       const newCategory = new Category({
         name: newCategoryName,
         status: 'pending',
       });
       const createdCategory = await newCategory.save();
-      category = createdCategory._id;
+      categoryIdToUse = createdCategory._id;
     }
   } else if (categoryId) {
     // Vendor selected an existing category
-    category = categoryId;
+    categoryIdToUse = categoryId;
   } else {
     res.status(400);
     throw new Error('Please provide a category for the product.');
@@ -68,7 +82,8 @@ const createProduct = asyncHandler(async (req, res) => {
     price,
     description,
     imageUrl,
-    category,
+    // FIX: Ensure category is stored in the 'categories' array field as per Product model schema
+    categories: [categoryIdToUse], 
     stock,
     user: req.user._id,
   });
@@ -81,7 +96,7 @@ const createProduct = asyncHandler(async (req, res) => {
 // @route   PUT /api/products/:id
 // @access  Private/Admin (or Vendor - must own product)
 const updateProduct = asyncHandler(async (req, res) => {
-  const { name, price, description, imageUrl, category } = req.body;
+  const { name, price, description, imageUrl, categories } = req.body;
 
   const product = await Product.findById(req.params.id);
 
@@ -96,7 +111,8 @@ const updateProduct = asyncHandler(async (req, res) => {
     product.price = price;
     product.description = description;
     product.imageUrl = imageUrl;
-    product.category = category;
+    // FIX: Update to use 'categories' field, expecting an array of IDs from the frontend
+    product.categories = categories; 
 
     const updatedProduct = await product.save();
     res.json(updatedProduct);

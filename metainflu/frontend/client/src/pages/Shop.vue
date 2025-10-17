@@ -1,23 +1,15 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-
-// --- MOCK SERVICE & DATA (Since external service imports are not allowed in single files) ---
-
-const mockProducts = [
-  { _id: 1, name: 'Structured Blazer', price: 290, category: 'Outerwear', img: 'https://placehold.co/600x600/e5e7eb/374151?text=Blazer', createdAt: new Date('2024-01-10') },
-  { _id: 2, name: 'Slim Trousers', price: 150, category: 'Bottoms', img: 'https://placehold.co/600x600/d1d5db/374151?text=Trousers', createdAt: new Date('2024-01-15') },
-  { _id: 3, name: 'Ribbed Turtleneck', price: 90, category: 'Knitwear', img: 'https://placehold.co/600x600/e5e7eb/374151?text=Turtleneck', createdAt: new Date('2024-02-01') },
-  { _id: 4, name: 'Leather Belt', price: 75, category: 'Accessories', img: 'https://placehold.co/600x600/d1d5db/374151?text=Belt', createdAt: new Date('2024-02-20') },
-  { _id: 5, name: 'Cashmere Scarf', price: 110, category: 'Accessories', img: 'https://placehold.co/600x600/e5e7eb/374151?text=Scarf', createdAt: new Date('2024-03-05') },
-  { _id: 6, name: 'Wool Overshirt', price: 180, category: 'Outerwear', img: 'https://placehold.co/600x600/d1d5db/374151?text=Overshirt', createdAt: new Date('2024-03-10') },
-  { _id: 7, name: 'Straight-Fit Jeans', price: 165, category: 'Bottoms', img: 'https://placehold.co/600x600/e5e7eb/374151?text=Jeans', createdAt: new Date('2024-03-25') },
-  { _id: 8, name: 'V-Neck Jumper', price: 85, category: 'Knitwear', img: 'https://placehold.co/600x600/d1d5db/374151?text=Jumper', createdAt: new Date('2024-04-01') },
-];
+import { ref, computed, onMounted, watch } from 'vue';
+import productService from '../services/productService';
+import categoryService from '../services/categoryService'; 
+// 1. IMPORT THE DEDICATED PRODUCT CARD COMPONENT
+import ProductCard from '../components/ProductCard.vue'; 
 
 // --- INLINE COMPONENTS ---
 
-// 1. Navbar/Header Component
+// 1. Navbar/Header Component (Kept minimal and inline for single-file approach)
 const AuraNavbar = {
+  emits: ['toggle-filter'],
   template: `
     <header class="ios-header-blur sticky top-0 z-50 transition duration-300">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -45,22 +37,9 @@ const AuraNavbar = {
   `,
 };
 
-// 2. Product Card Component
-const ProductCard = {
-  props: ['product'],
-  template: `
-    <div class="group cursor-pointer">
-      <div class="aspect-square bg-white rounded-xl overflow-hidden ios-card-shadow mb-4">
-        <img :src="product.img" :alt="product.name" class="w-full h-full object-cover group-hover:scale-[1.05] transition duration-500" onerror="this.onerror=null; this.src='https://placehold.co/600x600/e5e7eb/374151?text=Image+Error'">
-      </div>
-      <p class="text-sm text-gray-700 tracking-wide">{{ product.category }}</p>
-      <h3 class="text-lg font-medium mt-1">{{ product.name }}</h3>
-      <p class="text-md font-semibold mt-1">\${{ product.price }}</p>
-    </div>
-  `,
-};
+// 2. Product Card Component: REMOVED INLINE DEFINITION HERE
 
-// 3. Footer Component
+// 3. Footer Component (Inline definition retained)
 const PageFooter = {
   template: `
     <footer class="mt-20 border-t border-gray-200 bg-white">
@@ -102,66 +81,94 @@ const PageFooter = {
 };
 
 
-// --- SHOP ALL LOGIC ---
+// --- SHOP PAGE LOGIC (UPDATED) ---
 
 const allProducts = ref([]);
-// Extracted categories from mock data, plus 'All'
-const categories = ref(['All', 'Outerwear', 'Bottoms', 'Knitwear', 'Accessories']);
-const selectedCategory = ref('All');
-// Renamed to follow new design (sidebar open on mobile)
+const categories = ref([]); // Stores fetched approved categories { _id, name }
+const selectedCategoryId = ref('All'); 
 const isSidebarOpen = ref(false); 
-const sortOption = ref('new'); // Default to 'Newest First' from new HTML
+const sortOption = ref('new'); 
+const isLoading = ref(true);
+const error = ref(null);
 
 const toggleSidebar = () => (isSidebarOpen.value = !isSidebarOpen.value);
 const closeSidebar = () => (isSidebarOpen.value = false);
-const selectCategory = cat => {
-  selectedCategory.value = cat;
-  closeSidebar(); // Close sidebar on mobile after selecting
+
+/**
+ * Sets the selected category ID and triggers a new product fetch.
+ * @param {string} id - The MongoDB ObjectID of the selected category, or 'All'.
+ */
+const selectCategory = (id) => {
+  if (selectedCategoryId.value === id) return; // Prevent unnecessary re-fetches
+  selectedCategoryId.value = id;
+  fetchProducts(id); 
+  closeSidebar();
 };
 
-// Categories with counts for the sidebar display
-const categoriesWithCounts = computed(() => {
-  const counts = allProducts.value.reduce((acc, p) => {
-    acc[p.category] = (acc[p.category] || 0) + 1;
-    return acc;
-  }, {});
-
-  return categories.value
-    .filter(cat => cat !== 'All')
-    .map(cat => ({
-      name: cat,
-      count: counts[cat] || 0,
-      slug: cat.toLowerCase().replace(/\s/g, '_'),
-    }));
-});
-
-
-const filteredProducts = computed(() => {
-  let products = allProducts.value;
-  if (selectedCategory.value !== 'All') {
-    products = products.filter(p => p.category === selectedCategory.value);
+/**
+ * Fetches all products based on the currently selected filter.
+ * @param {string} categoryId - The MongoDB ObjectID or 'All'.
+ */
+const fetchProducts = async (categoryId = selectedCategoryId.value) => {
+  isLoading.value = true;
+  error.value = null;
+  allProducts.value = [];
+  
+  try {
+    const filterId = categoryId === 'All' ? null : categoryId;
+    // The productService is designed to handle passing the filter parameter
+    const data = await productService.getProducts(filterId);
+    
+    // Assign fetched data 
+    allProducts.value = data; 
+  } catch (err) {
+    console.error('Error fetching products:', err);
+    error.value = err.message || 'Failed to load products from the store.';
+  } finally {
+    isLoading.value = false;
   }
-  // The new design removes the complex price filtering from the UI, so we remove the logic here.
-  return products;
+};
+
+/**
+ * Fetches all approved categories for the filter sidebar.
+ */
+const fetchCategories = async () => {
+    try {
+        const data = await categoryService.getCategories();
+        categories.value = data;
+    } catch (err) {
+        console.error('Error fetching categories for filter:', err);
+        error.value = error.value || 'Could not load category filters.';
+    }
+};
+
+
+// Computed property to add the "All Products" option to the fetched category list
+const categoriesWithAll = computed(() => {
+  // Use category._id as the unique key
+  return [{ _id: 'All', name: 'All Products' }, ...categories.value];
 });
 
+
+// Computed property to apply client-side sorting on the fetched list
 const sortedProducts = computed(() => {
-  let products = [...filteredProducts.value];
+  let products = [...allProducts.value];
   if (sortOption.value === 'low-high') {
-    return products.sort((a, b) => a.price - b.price);
+    return products.sort((a, b) => (a.price || 0) - (b.price || 0));
   } else if (sortOption.value === 'high-low') {
-    return products.sort((a, b) => b.price - a.price);
+    return products.sort((a, b) => (b.price || 0) - (a.price || 0));
   } else if (sortOption.value === 'new') {
-    // Sort by createdAt descending
+    // Sort by createdAt descending (newest first)
     return products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
-  return products; // 'default' or unknown
+  return products; // Default
 });
 
 
-onMounted(async () => {
-  // Mock data loading
-  allProducts.value = mockProducts;
+// On Component Mount: Fetch everything
+onMounted(() => {
+  fetchCategories();
+  fetchProducts(); // Initial fetch (All products)
 });
 </script>
 
@@ -186,19 +193,19 @@ onMounted(async () => {
               <div>
                 <h3 class="font-medium mb-2">Category</h3>
                 <ul class="space-y-1 text-gray-600">
-                  <li v-for="cat in categoriesWithCounts" :key="cat.slug">
+                  <li v-for="cat in categoriesWithAll" :key="cat._id">
                     <a 
                       href="#" 
-                      @click.prevent="selectCategory(cat.name)"
-                      :class="['hover:text-gray-900 transition duration-150', { 'font-semibold text-gray-900': selectedCategory === cat.name }]"
+                      @click.prevent="selectCategory(cat._id)"
+                      :class="['hover:text-gray-900 transition duration-150', { 'font-semibold text-gray-900': selectedCategoryId === cat._id }]"
                     >
-                      {{ cat.name }} ({{ cat.count }})
+                      {{ cat.name }} 
                     </a>
                   </li>
                 </ul>
               </div>
               
-              <!-- Color Filter (Static representation from HTML) -->
+              <!-- Color Filter (Static Placeholder) -->
               <div>
                 <h3 class="font-medium mb-2">Color</h3>
                 <div class="flex flex-wrap gap-2">
@@ -209,7 +216,7 @@ onMounted(async () => {
                 </div>
               </div>
               
-              <!-- Sort By Dropdown (Duplicated for consistency, though primary sort is in grid header) -->
+              <!-- Sort By Dropdown -->
               <div>
                  <h3 class="font-medium mb-2">Sort By</h3>
                  <select v-model="sortOption" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-gray-900 focus:border-gray-900">
@@ -223,7 +230,8 @@ onMounted(async () => {
 
           <!-- Product Grid -->
           <div class="md:col-span-3 lg:col-span-4">
-            <!-- Mobile Sort/Filter Header (Replaces the old floating bar logic) -->
+            
+            <!-- Mobile Sort/Filter Header -->
             <div class="flex justify-between items-center mb-6 md:hidden">
               <span class="text-sm font-medium text-gray-500">{{ sortedProducts.length }} results</span>
                <div class="flex gap-2">
@@ -240,9 +248,18 @@ onMounted(async () => {
                    </button>
                </div>
             </div>
+            
+            <!-- Loading/Error State -->
+            <div v-if="isLoading" class="text-center py-20 col-span-full">
+              <p class="text-xl font-medium text-gray-500">Loading products... </p>
+            </div>
+             <div v-else-if="error" class="text-center py-20 col-span-full text-red-500">
+              <p class="text-xl font-medium">Error loading data: {{ error }}</p>
+              <button @click="fetchProducts" class="mt-4 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">Try Reloading</button>
+            </div>
 
-            <!-- Grid Display -->
-            <transition-group name="fade-up" tag="div" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
+            <!-- Product Grid -->
+            <transition-group v-else name="fade-up" tag="div" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
               <ProductCard
                 v-for="product in sortedProducts"
                 :key="product._id"
@@ -252,12 +269,12 @@ onMounted(async () => {
             </transition-group>
 
             <!-- Empty State -->
-            <div v-if="sortedProducts.length === 0" class="flex flex-col items-center justify-center py-20 text-center col-span-full">
+            <div v-if="!isLoading && !error && sortedProducts.length === 0" class="flex flex-col items-center justify-center py-20 text-center col-span-full">
               <p class="text-xl font-medium text-gray-400">No products match your criteria.</p>
               <p class="text-sm text-gray-300 mt-2">Try selecting 'All' or adjusting the sort option.</p>
             </div>
             
-            <!-- Pagination (Static representation from HTML) -->
+            <!-- Pagination (Static representation) -->
             <div class="col-span-full flex justify-center mt-10">
               <div class="flex items-center space-x-2">
                 <a href="#" class="px-4 py-2 text-sm font-medium border border-gray-300 rounded-full hover:bg-gray-100">&larr;</a>
@@ -286,23 +303,23 @@ onMounted(async () => {
             </button>
         </div>
 
-        <!-- Category Filter -->
+        <!-- Category Filter (Mobile) -->
         <div class="mb-6">
             <h3 class="font-medium mb-3">Category</h3>
             <ul class="space-y-2 text-gray-600">
-              <li v-for="cat in categoriesWithCounts" :key="cat.slug">
+              <li v-for="cat in categoriesWithAll" :key="cat._id">
                 <a 
                   href="#" 
-                  @click.prevent="selectCategory(cat.name)"
-                  :class="['text-base block py-1 hover:text-gray-900', { 'font-bold text-gray-900': selectedCategory === cat.name }]"
+                  @click.prevent="selectCategory(cat._id)"
+                  :class="['text-base block py-1 hover:text-gray-900', { 'font-bold text-gray-900': selectedCategoryId === cat._id }]"
                 >
-                  {{ cat.name }} ({{ cat.count }})
+                  {{ cat.name }}
                 </a>
               </li>
             </ul>
         </div>
 
-        <!-- Color Filter -->
+        <!-- Color Filter (Static Placeholder) -->
         <div class="mb-6">
             <h3 class="font-medium mb-3">Color</h3>
             <div class="flex flex-wrap gap-2">
