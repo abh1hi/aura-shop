@@ -1,284 +1,252 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AURA Mobile Admin App</title>
-    <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
-    <style>
-        /* Shared Minimalist Styling */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f7f7;
-            color: #1a1a1a;
-            padding: 0;
-            margin: 0;
-        }
-
-        /* Mobile Container: Constrains the app view to simulate a phone */
-        .mobile-app-container {
-            max-width: 420px; /* Max phone width */
-            margin: 0 auto;
-            min-height: 100vh;
-            background-color: #ffffff;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            position: relative; /* Needed for fixed bottom bar */
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* iOS-style frosted glass effect for the bottom tab bar */
-        .ios-tab-bar-blur {
-            background-color: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Active tab bar item */
-        .tab-item.active {
-            color: #1a1a1a; /* Dark text for active tab */
-        }
-        
-        /* Custom card shadow for elevation */
-        .ios-card-shadow {
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Content spacing for the mobile view, accounting for the fixed tab bar */
-        .main-content {
-            padding-bottom: 80px; /* Space for the fixed bottom bar */
-            flex-grow: 1;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aura Shop - Interactive Architecture Diagram (Fixed)</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; margin: 0; padding: 16px; background: #f2f4f7; }
+    .container { max-width: 1280px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(16,24,40,.08); overflow: hidden; }
+    .header { background: #0f172a; color: white; padding: 20px 24px; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+    .header p { margin: 6px 0 0 0; opacity: .85; font-size: 13px; }
+    .controls { display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: #fcfcfd; border-bottom: 1px solid #eef2f7; flex-wrap: wrap; }
+    .controls .control-item { display: flex; gap: 8px; align-items: center; }
+    select, button { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; font-size: 13px; }
+    button { background: #2563eb; color: white; border: none; cursor: pointer; }
+    button.secondary { background: #111827; }
+    #graph { width: 100%; height: 760px; background: #ffffff; }
+    .node { cursor: grab; }
+    .node:active { cursor: grabbing; }
+    .node circle { transition: r .15s ease; }
+    .node-frontend { fill: #16a34a; }
+    .node-backend { fill: #2563eb; }
+    .node-database { fill: #f59e0b; }
+    .node-route { fill: #7c3aed; }
+    .node-model { fill: #ef4444; }
+    .node-middleware { fill: #92400e; }
+    .node-component { fill: #06b6d4; }
+    .node-service { fill: #334155; }
+    .link { stroke: #cbd5e1; stroke-width: 1.75px; }
+    .tooltip { position: absolute; background: #0b1220; color: white; padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.35; max-width: 320px; pointer-events: none; opacity: 0; transform: translateY(-6px); transition: opacity .12s ease, transform .12s ease; box-shadow: 0 8px 24px rgba(2,6,23,.35); }
+    .tooltip h3 { margin: 0 0 6px 0; color: #34d399; font-size: 13px; }
+    .legend { padding: 12px 16px; background: #fcfcfd; border-top: 1px solid #eef2f7; display: flex; gap: 16px; flex-wrap: wrap; }
+    .legend-item { display: inline-flex; align-items: center; gap: 8px; color: #334155; font-size: 12px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 50%; }
+    .stats { display: flex; gap: 24px; padding: 12px 16px; background: #fff; border-top: 1px solid #eef2f7; font-size: 12px; color: #475569; }
+    .pill { padding: 4px 8px; background: #f1f5f9; border-radius: 999px; }
+    .banner { display:none; padding:10px 12px; background:#fff7ed; color:#9a3412; border-top:1px solid #fed7aa; font-size:12px; }
+  </style>
 </head>
 <body>
+<div class="container">
+  <div class="header">
+    <h1>🌟 Aura Shop Architecture</h1>
+    <p>Fixed: Restored nodes/edges, added runtime checks, and stabilized physics and hover</p>
+  </div>
 
-    <!-- Main Mobile App Container -->
-    <div class="mobile-app-container">
+  <div class="controls">
+    <div class="control-item">
+      <label>Layout</label>
+      <select id="layoutSelect">
+        <option value="force">Force</option>
+        <option value="hierarchy">Hierarchy</option>
+        <option value="grid">Grid</option>
+      </select>
+    </div>
+    <div class="control-item">
+      <label>Filter</label>
+      <select id="filterSelect">
+        <option value="all">All</option>
+        <option value="backend">Backend</option>
+        <option value="frontend">Frontend</option>
+        <option value="api">API</option>
+      </select>
+    </div>
+    <div class="control-item">
+      <button id="freezeBtn" class="secondary">Freeze</button>
+      <button id="unfreezeBtn">Unfreeze</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </div>
 
-        <!-- Header: Consistent title bar -->
-        <header class="p-5 border-b border-gray-100 sticky top-0 bg-white z-20">
-            <h1 id="header-title" class="text-2xl font-bold">Dashboard</h1>
-        </header>
+  <svg id="graph"></svg>
 
-        <!-- Main Content Area -->
-        <div class="main-content p-4 overflow-y-auto">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-color node-frontend"></div>Frontend</div>
+    <div class="legend-item"><div class="legend-color node-backend"></div>Backend</div>
+    <div class="legend-item"><div class="legend-color node-route"></div>Routes</div>
+    <div class="legend-item"><div class="legend-color node-middleware"></div>Middleware</div>
+    <div class="legend-item"><div class="legend-color node-model"></div>Models</div>
+    <div class="legend-item"><div class="legend-color node-database"></div>Database</div>
+    <div class="legend-item"><div class="legend-color node-component"></div>Components</div>
+    <div class="legend-item"><div class="legend-color node-service"></div>Services</div>
+  </div>
 
-            <!-- 1. DASHBOARD Page -->
-            <section id="dashboard" class="page-content">
-                <div class="space-y-4">
-                    <!-- KPI Cards (iOS Card Style) -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-gray-50 p-4 rounded-xl ios-card-shadow">
-                            <p class="text-sm text-gray-500 mb-1">Weekly Sales</p>
-                            <h3 class="text-xl font-bold">$4,250</h3>
-                            <p class="text-xs text-green-600 mt-1">+8.5% WoW</p>
-                        </div>
-                        <div class="bg-gray-50 p-4 rounded-xl ios-card-shadow">
-                            <p class="text-sm text-gray-500 mb-1">New Orders</p>
-                            <h3 class="text-xl font-bold">42</h3>
-                            <p class="text-xs text-green-600 mt-1">+1 Order</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Performance Chart Placeholder -->
-                    <div class="bg-white p-4 rounded-xl ios-card-shadow border border-gray-100">
-                        <h2 class="text-lg font-semibold mb-3">Revenue Trend (7 Days)</h2>
-                        <div class="h-40 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 text-sm">
-                            [Graph/Chart Placeholder]
-                        </div>
-                    </div>
+  <div class="stats">
+    <div>Nodes: <span class="pill" id="nodeCount">0</span></div>
+    <div>Links: <span class="pill" id="linkCount">0</span></div>
+    <div>Layers: <span class="pill" id="layerCount">0</span></div>
+    <div>Mode: <span class="pill" id="mode">Force</span></div>
+  </div>
+  <div id="banner" class="banner">⚠️ Graph data is empty. Please reload. If this persists, check console for errors.</div>
+</div>
 
-                    <!-- Action List -->
-                    <div class="bg-white rounded-xl ios-card-shadow border border-gray-100 divide-y divide-gray-100 overflow-hidden">
-                        <a href="#" class="flex justify-between items-center p-4 hover:bg-gray-50 transition">
-                            <p class="font-medium">Process 3 Pending Orders</p>
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3m0 2v2m2-2h2m-2 0h2m0 0V3m0 2v2"></path></svg>
-                        </a>
-                        <a href="#" class="flex justify-between items-center p-4 hover:bg-gray-50 transition">
-                            <p class="font-medium text-red-600">3 Items Low in Stock</p>
-                            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.3 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        </a>
-                    </div>
-                </div>
-            </section>
+<div class="tooltip" id="tooltip"></div>
 
-            <!-- 2. PRODUCTS Page (Hidden by default) -->
-            <section id="products" class="page-content hidden">
-                <!-- Search and CTA -->
-                <div class="flex items-center space-x-2 mb-4">
-                    <input type="text" placeholder="Search products..." class="flex-grow p-3 border border-gray-200 rounded-xl focus:border-gray-400 focus:ring-0 text-sm">
-                    <button class="bg-gray-900 text-white p-3 rounded-xl hover:bg-gray-700 transition duration-150 shadow-md flex items-center">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    </button>
-                </div>
+<script>
+// FULL graphData restored (no placeholders)
+const graphData = {
+  nodes: [
+    { id: "vue-app", name: "Vue App", type: "frontend", layer: "presentation", description: "Main Vue.js application", details: "Vue 3 + Vite\nSPA routing" },
+    { id: "vue-router", name: "Vue Router", type: "frontend", layer: "presentation", description: "SPA routing", details: "Guards & transitions" },
+    { id: "auth-pages", name: "Auth Pages", type: "component", layer: "presentation", description: "Login/Register", details: "Auth UI" },
+    { id: "shop-pages", name: "Shop Pages", type: "component", layer: "presentation", description: "Catalog/Cart/Checkout", details: "Shop flows" },
+    { id: "admin-pages", name: "Admin Panel", type: "component", layer: "presentation", description: "Admin UI", details: "Manage products/users" },
+    { id: "auth-service", name: "Auth Service", type: "service", layer: "service", description: "Auth client", details: "JWT, headers" },
+    { id: "api-service", name: "API Service", type: "service", layer: "service", description: "HTTP client", details: "Fetch/Axios" },
+    { id: "express-server", name: "Express Server", type: "backend", layer: "application", description: "Node backend", details: "Port 5000, CORS" },
+    { id: "auth-routes", name: "Auth Routes", type: "route", layer: "application", description: "Auth endpoints", details: "register/login/admin" },
+    { id: "product-routes", name: "Product Routes", type: "route", layer: "application", description: "Products API", details: "CRUD, filter" },
+    { id: "order-routes", name: "Order Routes", type: "route", layer: "application", description: "Orders API", details: "place/history" },
+    { id: "admin-routes", name: "Admin Routes", type: "route", layer: "application", description: "Admin API", details: "admin guard" },
+    { id: "vendor-routes", name: "Vendor Routes", type: "route", layer: "application", description: "Vendor API", details: "vendor guard" },
+    { id: "auth-middleware", name: "Auth Middleware", type: "middleware", layer: "security", description: "JWT/role checks", details: "protect/admin/vendor" },
+    { id: "error-middleware", name: "Error Middleware", type: "middleware", layer: "security", description: "Error handler", details: "standard responses" },
+    { id: "mongodb", name: "MongoDB", type: "database", layer: "data", description: "Database", details: "Mongoose" },
+    { id: "user-model", name: "User Model", type: "model", layer: "data", description: "User schema", details: "name/email/role" },
+    { id: "product-model", name: "Product Model", type: "model", layer: "data", description: "Product schema", details: "pricing/category" },
+    { id: "order-model", name: "Order Model", type: "model", layer: "data", description: "Order schema", details: "items/status" },
+    { id: "cart-model", name: "Cart Model", type: "model", layer: "data", description: "Cart schema", details: "user items" }
+  ],
+  links: [
+    { source: "vue-app", target: "vue-router" },
+    { source: "vue-router", target: "auth-pages" },
+    { source: "vue-router", target: "shop-pages" },
+    { source: "vue-router", target: "admin-pages" },
+    { source: "auth-pages", target: "auth-service" },
+    { source: "shop-pages", target: "api-service" },
+    { source: "admin-pages", target: "api-service" },
+    { source: "auth-service", target: "express-server" },
+    { source: "api-service", target: "express-server" },
+    { source: "express-server", target: "auth-routes" },
+    { source: "express-server", target: "product-routes" },
+    { source: "express-server", target: "order-routes" },
+    { source: "express-server", target: "admin-routes" },
+    { source: "express-server", target: "vendor-routes" },
+    { source: "admin-routes", target: "auth-middleware" },
+    { source: "vendor-routes", target: "auth-middleware" },
+    { source: "express-server", target: "error-middleware" },
+    { source: "auth-routes", target: "user-model" },
+    { source: "product-routes", target: "product-model" },
+    { source: "order-routes", target: "order-model" },
+    { source: "admin-routes", target: "user-model" },
+    { source: "admin-routes", target: "product-model" },
+    { source: "vendor-routes", target: "product-model" },
+    { source: "user-model", target: "mongodb" },
+    { source: "product-model", target: "mongodb" },
+    { source: "order-model", target: "mongodb" },
+    { source: "cart-model", target: "mongodb" }
+  ]
+};
 
-                <!-- Product List (Scrollable) -->
-                <div class="space-y-3">
-                    <!-- Product Card 1 -->
-                    <div class="flex items-center bg-white p-3 rounded-xl ios-card-shadow border border-gray-100 hover:bg-gray-50 cursor-pointer transition">
-                        <img src="https://placehold.co/60x60/e5e7eb/374151?text=A" alt="Product 1" class="w-16 h-16 rounded-lg object-cover mr-4">
-                        <div class="flex-grow">
-                            <p class="font-medium text-sm truncate">The Signature Trench Coat</p>
-                            <p class="text-xs text-gray-500">SKU: TCH001 | Price: $450</p>
-                        </div>
-                        <div class="text-right">
-                             <p class="text-sm font-bold text-green-600">120 in Stock</p>
-                             <p class="text-xs text-gray-400">Published</p>
-                        </div>
-                    </div>
-                    <!-- Product Card 2 -->
-                    <div class="flex items-center bg-white p-3 rounded-xl ios-card-shadow border border-gray-100 hover:bg-gray-50 cursor-pointer transition">
-                        <img src="https://placehold.co/60x60/d1d5db/374151?text=B" alt="Product 2" class="w-16 h-16 rounded-lg object-cover mr-4">
-                        <div class="flex-grow">
-                            <p class="font-medium text-sm truncate">Minimalist Leather Wallet</p>
-                            <p class="text-xs text-gray-500">SKU: WLT005 | Price: $65</p>
-                        </div>
-                        <div class="text-right">
-                             <p class="text-sm font-bold text-yellow-600">14 in Stock</p>
-                             <p class="text-xs text-gray-400">Published</p>
-                        </div>
-                    </div>
-                     <!-- Product Card 3 (Draft) -->
-                    <div class="flex items-center bg-white p-3 rounded-xl ios-card-shadow border border-gray-100 hover:bg-gray-50 cursor-pointer transition">
-                        <img src="https://placehold.co/60x60/f0f0f0/374151?text=C" alt="Product 3" class="w-16 h-16 rounded-lg object-cover mr-4 opacity-50">
-                        <div class="flex-grow">
-                            <p class="font-medium text-sm truncate">Unisex Slim Fit Hoodie</p>
-                            <p class="text-xs text-gray-500">SKU: HDIE002 | Price: $95</p>
-                        </div>
-                        <div class="text-right">
-                             <p class="text-sm font-bold text-gray-500">60 in Stock</p>
-                             <p class="text-xs text-red-500">Draft</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
+// Runtime guard: show banner if empty
+(function validate(){
+  const banner = document.getElementById('banner');
+  try {
+    const ok = graphData && Array.isArray(graphData.nodes) && graphData.nodes.length && Array.isArray(graphData.links);
+    if (!ok) { banner.style.display='block'; console.error('graphData invalid', graphData); }
+  } catch (e) { banner.style.display='block'; console.error('graphData error', e); }
+})();
 
-            <!-- 3. INVENTORY Page (Hidden by default) -->
-            <section id="inventory" class="page-content hidden">
-                <h2 class="text-xl font-bold mb-4">Stock Management</h2>
-                
-                <div class="bg-white p-5 rounded-xl ios-card-shadow border border-gray-100 mb-6 text-center">
-                    <h3 class="text-lg font-semibold mb-2">Quick Scan Update</h3>
-                    <p class="text-sm text-gray-500 mb-4">Tap to start camera or manually enter SKU.</p>
-                    <div class="flex justify-center mb-4">
-                        <button class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.218A2 2 0 0110.125 4h3.75a2 2 0 011.664.89l.812 1.218A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        </button>
-                    </div>
-                    <input type="text" placeholder="Enter SKU / Barcode Manually" class="w-full p-3 border border-gray-200 rounded-lg focus:border-gray-400 focus:ring-0 text-sm">
-                </div>
+const width = 1260, height = 760;
+const svg = d3.select('#graph').attr('width', width).attr('height', height);
+const g = svg.append('g');
+const zoom = d3.zoom().scaleExtent([0.3, 3]).on('zoom', (e)=> g.attr('transform', e.transform));
+svg.call(zoom);
 
-                <!-- Low Stock Alert List -->
-                <div class="bg-white rounded-xl ios-card-shadow border border-gray-100 divide-y divide-gray-100 overflow-hidden">
-                    <h3 class="text-lg font-semibold p-4 border-b border-gray-100 bg-red-50 text-red-700">Low Stock Alerts (3)</h3>
-                    <a href="#" class="flex justify-between items-center p-4 hover:bg-red-50 transition">
-                        <div>
-                             <p class="font-medium text-sm">White Minimalist Sneaker</p>
-                             <p class="text-xs text-gray-500">SKU: SNSKR02</p>
-                        </div>
-                        <div class="text-right">
-                             <p class="text-sm font-bold text-red-600">Stock: 5</p>
-                        </div>
-                    </a>
-                </div>
-            </section>
+// Forces (stable)
+const sim = d3.forceSimulation(graphData.nodes)
+  .force('link', d3.forceLink(graphData.links).id(d=>d.id).distance(120).strength(0.7))
+  .force('charge', d3.forceManyBody().strength(-180))
+  .force('center', d3.forceCenter(width/2, height/2))
+  .force('collision', d3.forceCollide().radius(28).strength(0.9));
 
-            <!-- 4. SETTINGS Page (Hidden by default) -->
-            <section id="settings" class="page-content hidden">
-                <h2 class="text-xl font-bold mb-4">App Settings</h2>
-                
-                <div class="bg-white rounded-xl ios-card-shadow border border-gray-100 divide-y divide-gray-100 overflow-hidden">
-                    <a href="#" class="flex justify-between items-center p-4 hover:bg-gray-50 transition">
-                        <p class="font-medium text-sm">User Profile</p>
-                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                    </a>
-                    <a href="#" class="flex justify-between items-center p-4 hover:bg-gray-50 transition">
-                        <p class="font-medium text-sm">Notifications & Alerts</p>
-                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                    </a>
-                    <a href="#" class="flex justify-between items-center p-4 hover:bg-gray-50 transition">
-                        <p class="font-medium text-sm">Billing & Subscription</p>
-                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                    </a>
-                    <button class="w-full text-left p-4 hover:bg-gray-50 transition text-sm font-medium text-red-600">
-                        Sign Out
-                    </button>
-                </div>
-            </section>
+// Pre-settle to avoid bounce
+let settleTicks = 120; sim.alpha(1); for (let i=0; i<settleTicks; i++) sim.tick(); sim.alphaTarget(0).alpha(0.1).restart();
 
-        </div> <!-- End of main-content -->
+// Links
+const link = g.append('g').selectAll('line').data(graphData.links).enter().append('line').attr('class','link').attr('opacity',0.55);
 
-        <!-- Bottom Tab Bar (Fixed iOS Style) -->
-        <nav class="ios-tab-bar-blur fixed bottom-0 w-full max-w-md mx-auto h-16 flex justify-around items-center border-t border-gray-200 z-30">
-            
-            <button data-page="dashboard" data-title="Dashboard" class="tab-item active flex flex-col items-center justify-center p-2 text-gray-500 transition duration-150">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"></path></svg>
-                <span class="text-xs mt-1">Home</span>
-            </button>
+// Nodes
+const node = g.append('g').selectAll('g').data(graphData.nodes).enter().append('g').attr('class','node')
+  .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
+node.append('circle').attr('r', 16).attr('class', d=>`node-${d.type}`);
+node.append('text').attr('dy', 26).attr('text-anchor','middle').style('font-size','11px').style('fill','#0f172a').text(d=>d.name);
 
-            <button data-page="products" data-title="Products" class="tab-item flex flex-col items-center justify-center p-2 text-gray-500 transition duration-150">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4m5 4h10l2 7H7l2-7z"></path></svg>
-                <span class="text-xs mt-1">Products</span>
-            </button>
+// Tooltip (click-to-freeze)
+const tooltip = d3.select('#tooltip');
+let frozen = false;
+node.on('mouseenter', function(e,d){ if(frozen) return; showTip(e,d); d3.select(this).select('circle').transition().duration(120).attr('r',20); })
+    .on('mousemove', function(e){ if(!frozen) positionTip(e); })
+    .on('mouseleave', function(){ if(!frozen) hideTip(); d3.select(this).select('circle').transition().duration(120).attr('r',16); })
+    .on('click', function(e,d){ frozen = !frozen; if(frozen){ showTip(e,d); } else { hideTip(); } });
 
-            <button data-page="inventory" data-title="Inventory" class="tab-item flex flex-col items-center justify-center p-2 text-gray-500 transition duration-150">
-                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10h16V7a2 2 0 00-2-2H6a2 2 0 00-2 2zM9 12h.01M15 12h.01"></path></svg>
-                <span class="text-xs mt-1">Stock</span>
-            </button>
+function showTip(e,d){ tooltip.style('opacity',1).style('transform','translateY(0)').html(`
+  <h3>${d.name}</h3>
+  <div><b>Type:</b> ${d.type}</div>
+  <div><b>Layer:</b> ${d.layer}</div>
+  <div style="margin-top:6px">${(d.description||'')}</div>
+  <div style="opacity:.8;margin-top:4px;white-space:pre-line">${(d.details||'')}</div>
+`); positionTip(e); }
+function positionTip(e){ tooltip.style('left',(e.pageX+12)+'px').style('top',(e.pageY-12)+'px'); }
+function hideTip(){ tooltip.style('opacity',0).style('transform','translateY(-6px)'); }
 
-            <button data-page="settings" data-title="Settings" class="tab-item flex flex-col items-center justify-center p-2 text-gray-500 transition duration-150">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                <span class="text-xs mt-1">Settings</span>
-            </button>
-        </nav>
+// Tick
+sim.on('tick', ()=>{
+  link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+  node.attr('transform', d=>`translate(${d.x},${d.y})`);
+});
 
-    </div> <!-- End of mobile-app-container -->
+// Drag
+function dragstarted(event,d){ if(!event.active) sim.alphaTarget(0.05).restart(); d.fx=d.x; d.fy=d.y; }
+function dragged(event,d){ d.fx=event.x; d.fy=event.y; }
+function dragended(event,d){ if(!event.active) sim.alphaTarget(0); if(!frozen){ d.fx=null; d.fy=null; } }
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const tabButtons = document.querySelectorAll('.tab-item');
-            const pageContents = document.querySelectorAll('.page-content');
-            const headerTitle = document.getElementById('header-title');
+// Layouts
+const layoutSelect=document.getElementById('layoutSelect'); layoutSelect.addEventListener('change',()=>applyLayout(layoutSelect.value));
+function applyLayout(mode){ document.getElementById('mode').textContent=mode.charAt(0).toUpperCase()+mode.slice(1);
+  if(mode==='hierarchy'){ const layers=['presentation','service','application','security','data']; sim.force('x', d3.forceX().x(d=>(layers.indexOf(d.layer)+1)*(width/6)).strength(1)); sim.force('y', d3.forceY(height/2).strength(0.05)); }
+  else if(mode==='grid'){ const cols=5, gapX=width/(cols+1), gapY=130; sim.force('x', d3.forceX().x((d,i)=>((i%cols)+1)*gapX).strength(1)); sim.force('y', d3.forceY().y((d,i)=>(Math.floor(i/cols)+1)*gapY).strength(1)); }
+  else { sim.force('x', null); sim.force('y', null); sim.force('center', d3.forceCenter(width/2, height/2)); }
+  sim.alpha(0.5).restart(); }
 
-            function switchPage(targetPageId, targetTitle) {
-                // 1. Hide all content pages
-                pageContents.forEach(page => page.classList.add('hidden'));
+// Filters (never fully hide)
+const filterSelect=document.getElementById('filterSelect'); filterSelect.addEventListener('change',()=>applyFilter(filterSelect.value));
+function applyFilter(filter){ node.style('opacity', d=>{
+    if(filter==='backend') return ['backend','route','middleware','model','database'].includes(d.type)?1:0.2;
+    if(filter==='frontend') return ['frontend','component','service'].includes(d.type)?1:0.2;
+    if(filter==='api') return ['route','backend','service'].includes(d.type)?1:0.2;
+    return 1;
+  });
+  link.style('opacity', d=>{
+    const show = (types)=> types.includes(d.source.type) && types.includes(d.target.type);
+    if(filter==='backend') return show(['backend','route','middleware','model','database'])?0.55:0.15;
+    if(filter==='frontend') return show(['frontend','component','service'])?0.55:0.15;
+    if(filter==='api') return show(['route','backend','service'])?0.55:0.15;
+    return 0.55;
+  });
+}
 
-                // 2. Show the target page
-                const activePage = document.getElementById(targetPageId);
-                if (activePage) {
-                    activePage.classList.remove('hidden');
-                }
+// Freeze/Unfreeze/Reset
+document.getElementById('freezeBtn').addEventListener('click', ()=>{ graphData.nodes.forEach(n=>{ n.fx=n.x; n.fy=n.y; }); sim.alphaTarget(0).stop(); });
+document.getElementById('unfreezeBtn').addEventListener('click', ()=>{ graphData.nodes.forEach(n=>{ n.fx=null; n.fy=null; }); sim.alpha(0.6).restart(); });
+document.getElementById('resetBtn').addEventListener('click', ()=>{ svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity); applyLayout('force'); sim.alpha(0.8).restart(); });
 
-                // 3. Update active state in the tab bar
-                tabButtons.forEach(button => button.classList.remove('active', 'text-gray-900', 'font-semibold'));
-                const activeButton = document.querySelector(`[data-page="${targetPageId}"]`);
-                if (activeButton) {
-                    activeButton.classList.add('active', 'text-gray-900', 'font-semibold');
-                    activeButton.classList.remove('text-gray-500');
-                }
-
-                // 4. Update Header Title
-                headerTitle.textContent = targetTitle;
-            }
-
-            // Event Listener for tab clicks
-            tabButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const pageId = button.getAttribute('data-page');
-                    const title = button.getAttribute('data-title');
-                    switchPage(pageId, title);
-                });
-            });
-
-            // Initial load state (ensures the active class is set correctly on JS load)
-            switchPage('dashboard', 'Dashboard'); 
-        });
-    </script>
-
+// Stats
+function updateStats(){ document.getElementById('nodeCount').textContent=graphData.nodes.length; document.getElementById('linkCount').textContent=graphData.links.length; document.getElementById('layerCount').textContent=new Set(graphData.nodes.map(n=>n.layer)).size; }
+updateStats();
+</script>
 </body>
 </html>
