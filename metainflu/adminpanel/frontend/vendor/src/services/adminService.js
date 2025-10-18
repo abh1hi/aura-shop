@@ -4,28 +4,7 @@
   users, getting products, and creating new products, including authentication headers.
 */
 
-const API_URL = 'http://localhost:5000/api/';
-
-// Helper function to retrieve the admin token from localStorage.
-const getToken = () => {
-  const adminUser = localStorage.getItem('adminUser');
-  if (adminUser) {
-    return JSON.parse(adminUser).token;
-  }
-  return null;
-};
-
-// Helper function to create authentication headers.
-const getAuthHeaders = () => {
-  const token = getToken();
-  // Although we check for a token, we don't throw an error here.
-  // This allows the API to handle unauthorized requests gracefully,
-  // which is better for centralized error handling in the UI.
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
-  };
-};
+import api from './apiClient';
 
 /**
  * Fetches all users from the backend (admin only).
@@ -34,16 +13,8 @@ const getAuthHeaders = () => {
  */
 const getUsers = async () => {
   try {
-    const response = await fetch(API_URL + 'admin/users', {
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to fetch users');
-    }
-
-    return await response.json();
+    const { data } = await api.get('/admin/users');
+    return data;
   } catch (error) {
     console.error('Failed to fetch users:', error);
     throw error;
@@ -56,14 +27,8 @@ const getUsers = async () => {
  */
 const getProducts = async () => {
   try {
-    const response = await fetch(API_URL + 'products');
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to fetch products');
-    }
-
-    return await response.json();
+    const { data } = await api.get('/products');
+    return data;
   } catch (error) {
     console.error('Failed to fetch products:', error);
     throw error;
@@ -78,18 +43,8 @@ const getProducts = async () => {
  */
 const createProduct = async (productData) => {
   try {
-    const response = await fetch(API_URL + 'products', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(productData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to create product');
-    }
-
-    return await response.json();
+    const { data } = await api.post('/products', productData);
+    return data;
   } catch (error) {
     console.error('Failed to create product:', error);
     throw error;
@@ -102,14 +57,8 @@ const createProduct = async (productData) => {
  */
 const getPendingCategories = async () => {
   try {
-      const response = await fetch(`${API_URL}admin/categories/pending`, {
-        headers: getAuthHeaders(),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch pending categories');
-      }
-      return response.json();
+      const { data } = await api.get('/admin/categories/pending');
+      return data;
   } catch (error) {
       console.error('Failed to fetch pending categories:', error);
       throw error;
@@ -123,15 +72,8 @@ const getPendingCategories = async () => {
  */
 const approveCategory = async (id) => {
     try {
-        const response = await fetch(`${API_URL}admin/categories/${id}/approve`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to approve category');
-        }
-        return response.json();
+    const { data } = await api.put(`/admin/categories/${id}/approve`);
+    return data;
     } catch (error) {
         console.error('Failed to approve category:', error);
         throw error;
@@ -145,15 +87,8 @@ const approveCategory = async (id) => {
  */
 const rejectCategory = async (id) => {
     try {
-        const response = await fetch(`${API_URL}admin/categories/${id}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(),
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to reject category');
-        }
-        return response.json();
+    const { data } = await api.delete(`/admin/categories/${id}`);
+    return data;
     } catch (error) {
         console.error('Failed to reject category:', error);
         throw error;

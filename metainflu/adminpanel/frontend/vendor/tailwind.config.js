@@ -3,36 +3,41 @@ export default {
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
   theme: {
     extend: {
-      fontFamily: {
-        sans: ['system-ui', '-apple-system', 'Segoe UI', 'Inter', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
-      },
       colors: {
-        ios: {
-          bg: '#F2F2F7',
-          surface: '#FFFFFF',
-          separator: 'rgba(60,60,67,0.29)',
-          primary: '#0A84FF',
-          success: '#34C759',
-          warning: '#FF9F0A',
-          danger: '#FF453A',
-          indigo: '#5856D6',
-          text: '#1C1C1E',
-          secondary: '#3A3A3C',
-          tertiary: '#8E8E93'
-        }
+        // Core Palette (inspired by iOS/Dribbble shot)
+        'primary-blue': '#007AFF', // Main actionable blue
+        'secondary-blue': '#E9F5FF', // Lighter blue for backgrounds/highlights
+        'gray-bg': '#F8F9FA', // Lightest background
+        'gray-surface': '#FFFFFF', // Card/surface background
+        'gray-text': '#6C757D', // Secondary text
+        'gray-dark-text': '#212529', // Primary text
+        'gray-border': '#E0E0E0', // Light borders
+        'success-green': '#28A745', // For "Completed" tasks
+        'info-purple': '#6F42C1', // For "In Progress" or other info
+        'warning-orange': '#FD7E14', // For "Pending" status
+        'danger-red': '#DC3545', // For alerts/errors
+        'chart-blue': '#7B61FF', // For the line chart (Budget vs Actual)
+        'chart-green': '#A7ED86', // Another chart color
+        'chart-light-blue': '#84E0FF', // Bar chart color
+        'chart-light-purple': '#D9D0FF', // Bar chart color
+        'chart-light-green': '#DCFCE7', // Card highlight color
+      },
+      fontFamily: {
+        // Use Inter as a default clean sans-serif font
+        sans: ['Inter var', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif'],
       },
       borderRadius: {
-        lg: '14px',
-        md: '12px',
-        sm: '10px'
+        'lg': '12px',
+        'xl': '16px',
+        '2xl': '24px',
+        '3xl': '32px',
       },
       boxShadow: {
-        card: '0 0.5px 0 rgba(60,60,67,0.1), 0 1px 1px rgba(0,0,0,0.04)'
+        'soft': '0 4px 12px rgba(0, 0, 0, 0.05)',
+        'md': '0 6px 16px rgba(0, 0, 0, 0.08)',
+        'lg': '0 8px 20px rgba(0, 0, 0, 0.1)',
       },
-      transitionDuration: {
-        180: '180ms'
-      }
-    }
+    },
   },
-  plugins: []
+  plugins: [],
 };

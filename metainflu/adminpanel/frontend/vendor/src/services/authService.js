@@ -10,7 +10,9 @@
   under the key 'vendorUser' (to avoid clashing with client/admin keys).
 */
 
-const API_URL = 'http://localhost:5000/api/auth/';
+import api from './apiClient';
+
+const API_URL = '/auth/';
 
 const VENDOR_STORAGE_KEY = 'vendorUser';
 
@@ -52,18 +54,7 @@ const isVendor = async () => {
 
 const login = async (credentials) => {
   try {
-    const res = await fetch(API_URL + 'login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Login failed');
-    }
-
-    const data = await res.json();
+    const { data } = await api.post(API_URL + 'vendor/login', credentials);
     // Expecting { token, user }
     saveVendorUser(data);
     return data;
@@ -75,18 +66,7 @@ const login = async (credentials) => {
 
 const register = async (payload) => {
   try {
-    const res = await fetch(API_URL + 'register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Registration failed');
-    }
-
-    const data = await res.json();
+    const { data } = await api.post(API_URL + 'register', payload);
     // Optionally auto-login after register if backend returns token/user
     if (data && data.token) {
       saveVendorUser(data);
@@ -105,40 +85,24 @@ const logout = () => {
 // Optional helpers for profile & password flows
 const updateProfile = async (payload) => {
   const token = getToken();
-  const res = await fetch(API_URL + 'profile', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
-  });
-  return await res.json();
+  const { data } = await api.put(API_URL + 'profile', payload);
+  return data;
 };
 
 const requestPasswordReset = async (email) => {
-  const res = await fetch(API_URL + 'request-password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  });
-  return await res.json();
+  const { data } = await api.post(API_URL + 'request-password', { email });
+  return data;
 };
 
 const resetPassword = async (token, newPassword) => {
-  const res = await fetch(API_URL + `reset-password/${token}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: newPassword }),
-  });
-  return await res.json();
+  const { data } = await api.post(API_URL + `reset-password/${token}`, { password: newPassword });
+  return data;
 };
 
 const refreshToken = async () => {
   const token = getToken();
   if (!token) throw new Error('No token');
-  const res = await fetch(API_URL + 'refresh', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = await res.json();
+  const { data } = await api.post(API_URL + 'refresh');
   if (data.token) {
     const user = getVendorUser() || {};
     saveVendorUser({ ...user, token: data.token });

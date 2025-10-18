@@ -1,7 +1,7 @@
 {
-  "name": "client",
+  "name": "vendor-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,9 +10,10 @@
     "tailwind:init": "tailwindcss init -p"
   },
   "dependencies": {
-    "chart.js": "^4.5.1",
+    "chart.js": "^4.4.3",
+    "axios": "^1.5.0",
     "vue": "^3.4.21",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.3.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",

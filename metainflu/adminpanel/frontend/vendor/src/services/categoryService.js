@@ -1,12 +1,13 @@
 /*
-  Category service for vendor app to list categories
+  File: frontend/client/src/services/productService.js
+  Purpose: Handles fetching product data for the client-facing shop, now supporting category filtering.
 */
-const API_URL = 'http://localhost:5000/api/categories/';
+
+import api from './apiClient';
 
 const getCategories = async () => {
-  const res = await fetch(API_URL);
-  if (!res.ok) throw new Error('Failed to fetch categories');
-  return res.json();
+  const { data } = await api.get('/categories');
+  return data;
 };
 
 export default { getCategories };

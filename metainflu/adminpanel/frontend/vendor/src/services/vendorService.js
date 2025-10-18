@@ -5,35 +5,9 @@
   /api/products/ for product management.
 */
 
-// Set the base URL for the backend API
-const API_BASE_URL = 'http://localhost:5000/api/';
+import api from './apiClient';
 
-/**
- * Helper function to retrieve the vendor's token from local storage.
- * @returns {string | null} The JWT token.
- */
-const getToken = () => {
-  const user = localStorage.getItem('user');
-  if (user) {
-    return JSON.parse(user).token;
-  }
-  return null;
-};
-
-/**
- * Helper function to create authentication headers.
- * @returns {object} Headers object.
- */
-const getAuthHeaders = () => {
-  const token = getToken();
-  if (!token) {
-    throw new Error('Vendor not authenticated. Please log in.');
-  }
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
-  };
-};
+// Use apiClient which already points to /api base and attaches token
 
 /**
  * Fetches vendor-specific dashboard statistics.
@@ -42,22 +16,14 @@ const getAuthHeaders = () => {
  */
 const getVendorDashboardStats = async (params) => {
   try {
-    let url = API_BASE_URL + 'vendor/dashboard/stats';
+  let url = '/vendor/dashboard/stats';
     if (params) {
       const query = new URLSearchParams(params).toString();
       url += `?${query}`;
     }
 
-    const response = await fetch(url, {
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to fetch dashboard stats');
-    }
-
-    return await response.json();
+    const { data } = await api.get(url, { params });
+    return data;
   } catch (error) {
     console.error('getVendorDashboardStats failed:', error);
     throw error;
@@ -71,16 +37,8 @@ const getVendorDashboardStats = async (params) => {
 const getVendorProducts = async () => {
   try {
     // Hits the protected route specific to fetching the current vendor's products
-    const response = await fetch(API_BASE_URL + 'vendor/products', {
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to fetch vendor products');
-    }
-
-    return await response.json();
+    const { data } = await api.get('/vendor/products');
+    return data;
   } catch (error) {
     console.error('getVendorProducts failed:', error);
     throw error;
@@ -95,18 +53,8 @@ const getVendorProducts = async () => {
 const createProduct = async (productData) => {
   try {
     // Hits the product route, which will be filtered by the backend controller to the current vendor
-    const response = await fetch(API_BASE_URL + 'products', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(productData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to create product');
-    }
-
-    return await response.json();
+    const { data } = await api.post('/products', productData);
+    return data;
   } catch (error) {
     console.error('createProduct failed:', error);
     throw error;
@@ -122,18 +70,8 @@ const createProduct = async (productData) => {
 const updateProduct = async (productId, productData) => {
   try {
     // Hits the product route, restricted to vendor/admin roles
-    const response = await fetch(`${API_BASE_URL}products/${productId}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(productData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to update product');
-    }
-
-    return await response.json();
+    const { data } = await api.put(`/products/${productId}`, productData);
+    return data;
   } catch (error) {
     console.error('updateProduct failed:', error);
     throw error;
@@ -148,18 +86,8 @@ const updateProduct = async (productId, productData) => {
 const deleteProduct = async (productId) => {
   try {
     // Hits the product route, restricted to vendor/admin roles
-    const response = await fetch(`${API_BASE_URL}products/${productId}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to delete product');
-    }
-
-    // Deletion usually returns a simple success message
-    return { message: 'Product deleted successfully' };
+    const { data } = await api.delete(`/products/${productId}`);
+    return data;
   } catch (error) {
     console.error('deleteProduct failed:', error);
     throw error;
@@ -173,16 +101,8 @@ const deleteProduct = async (productId) => {
 const getVendorOrders = async () => {
   try {
     // Hits the protected route specific to fetching the current vendor's orders
-    const response = await fetch(API_BASE_URL + 'vendor/orders', {
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to fetch vendor orders');
-    }
-
-    return await response.json();
+    const { data } = await api.get('/vendor/orders');
+    return data;
   } catch (error) {
     console.error('getVendorOrders failed:', error);
     throw error;
@@ -197,17 +117,8 @@ const getVendorOrders = async () => {
 const markOrderShipped = async (orderId) => {
   try {
     // Hits the protected route to update order status
-    const response = await fetch(`${API_BASE_URL}vendor/orders/${orderId}/ship`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to mark order as shipped');
-    }
-
-    return await response.json();
+    const { data } = await api.put(`/vendor/orders/${orderId}/ship`);
+    return data;
   } catch (error) {
     console.error('markOrderShipped failed:', error);
     throw error;

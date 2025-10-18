@@ -1,18 +1,18 @@
 <template>
-  <header class="bg-transparent border-b border-[color:var(--separator)] sticky top-0 z-30">
+  <header class="sticky top-0 z-30" style="backdrop-filter: blur(6px);">
     <div class="flex items-center justify-between h-14 px-4">
-      <h1 class="text-[17px] font-semibold text-[color:var(--text)]">{{ pageTitle }}</h1>
-      <div class="flex items-center gap-1.5">
-        <button class="p-2 rounded-full hover:bg-black/5 transition" @click="openSearch" title="Search">
-          <MagnifyingGlassIcon class="h-5 w-5 text-[color:var(--text-secondary)]" />
+      <h1 class="text-[17px] font-semibold" style="color:var(--text)">{{ pageTitle }}</h1>
+      <div class="flex items-center gap-2">
+        <button class="p-2 ios-rounded" @click="openSearch" title="Search" style="background:transparent">
+          <MagnifyingGlassIcon class="h-5 w-5" />
         </button>
-        <button class="relative p-2 rounded-full hover:bg-black/5 transition" @click="toggleNotifications" :aria-label="`Notifications (${unreadCount})`">
-          <BellIcon class="h-5 w-5 text-[color:var(--text-secondary)]" />
-          <span v-if="unreadCount" class="absolute top-1.5 right-1.5 h-4 min-w-4 px-1 rounded-full bg-[color:var(--primary)] text-white text-[10px] leading-4 text-center">{{ unreadCount }}</span>
+        <button class="relative p-2 ios-rounded" @click="toggleNotifications" :aria-label="`Notifications (${unreadCount})`">
+          <BellIcon class="h-5 w-5" />
+          <span v-if="unreadCount" class="absolute top-1.5 right-1.5 h-4 min-w-4 px-1 rounded-full" style="background:var(--primary);color:white;font-size:10px">{{ unreadCount }}</span>
         </button>
-        <button class="flex items-center gap-2 pl-2 pr-2 py-1 rounded-full hover:bg-black/5 transition" @click="toggleUserMenu">
+        <button class="flex items-center gap-2 pl-2 pr-2 py-1 ios-rounded" @click="toggleUserMenu" style="background:transparent">
           <img :src="currentUser.avatar" alt="" class="h-7 w-7 rounded-full" />
-          <ChevronDownIcon class="h-4 w-4 text-[color:var(--text-tertiary)]" />
+          <ChevronDownIcon class="h-4 w-4" />
         </button>
       </div>
     </div>

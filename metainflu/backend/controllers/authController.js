@@ -94,9 +94,42 @@ const loginAdmin = asyncHandler(async (req, res) => {
     }
 });
 
+
+// Handles vendor-specific login.
+const loginVendor = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        res.status(401);
+        throw new Error('Invalid credentials');
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+        res.status(401);
+        throw new Error('Invalid credentials');
+    }
+
+    if (user.role !== 'vendor') {
+        res.status(403);
+        throw new Error('Not authorized as a vendor');
+    }
+
+    res.json({
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token: generateToken(user._id),
+    });
+});
+
 module.exports = {
   registerUser,
   loginUser,
   loginAdmin, // This line is crucial and ensures loginAdmin is exported.
+  loginVendor,
 };
 

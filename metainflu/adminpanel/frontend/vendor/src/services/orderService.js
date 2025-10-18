@@ -2,12 +2,11 @@
   Order service placeholder for vendor Account page references.
   Implement endpoints as needed.
 */
-const API_URL = 'http://localhost:5000/api/orders/';
+import api from './apiClient';
 
 const listOrders = async () => {
-  const res = await fetch(API_URL);
-  if (!res.ok) throw new Error('Failed to fetch orders');
-  return res.json();
+  const { data } = await api.get('/orders');
+  return data;
 };
 
 export default { listOrders };

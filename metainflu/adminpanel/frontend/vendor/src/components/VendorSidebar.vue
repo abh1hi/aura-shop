@@ -1,100 +1,73 @@
 <template>
-  <aside class="hidden md:flex flex-col gap-3 p-3" :class="wrapperClass">
-    <!-- Profile Card -->
-    <div class="card p-3">
-      <div class="flex items-center gap-3">
-        <img :src="vendorProfile.avatar" alt="" class="h-10 w-10 rounded-full" />
-        <div>
-          <div class="text-[15px] font-semibold text-[color:var(--text)]">{{ vendorProfile.name }}</div>
-          <div class="text-[12px] text-[color:var(--text-tertiary)]">{{ vendorProfile.businessName }}</div>
-        </div>
+  <div :class="['fixed inset-0 z-50 transform transition-transform duration-300 ease-in-out', isOpen ? 'translate-x-0' : '-translate-x-full', 'w-full']">
+    <!-- Overlay -->
+    <div v-if="isOpen" @click="$emit('close-sidebar')" class="absolute inset-0 bg-black bg-opacity-40"></div>
+
+    <!-- Sidebar Content -->
+    <div class="relative w-64" style="background:var(--surface);height:100%;box-shadow:var(--shadow-soft);padding:1rem;border-radius:var(--card-radius)" @click.stop>
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold">Subtracker</h2>
+        <button @click="$emit('close-sidebar')" class="p-2" style="border-radius:10px">
+          <!-- Close Icon -->
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <nav style="flex:1;margin-top:0.5rem">
+        <ul>
+          <li v-for="item in navItems" :key="item.name" style="margin-bottom:0.4rem">
+            <router-link :to="item.path" @click="$emit('close-sidebar')" style="display:flex;align-items:center;padding:0.6rem;border-radius:10px;color:var(--text);text-decoration:none">
+              <component :is="item.icon" class="w-5 h-5 mr-3" />
+              <span>{{ item.name }}</span>
+            </router-link>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="mt-auto pt-4" style="border-top:1px solid rgba(15,23,36,0.06);padding-top:0.8rem">
+        <button @click="logout" style="display:flex;align-items:center;padding:0.6rem;border-radius:10px;width:100%;background:transparent;color:#e11d48;text-align:left">
+          <!-- Logout Icon -->
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+          <span>Logout</span>
+        </button>
       </div>
     </div>
-
-    <!-- Navigation (grouped) -->
-    <nav class="grouped" role="navigation" aria-label="Primary">
-      <RouterLink
-        v-for="item in nav"
-        :key="item.name"
-        :to="item.to"
-        class="row items-center"
-        :class="linkClass(item)"
-      >
-        <component :is="item.icon" class="h-5 w-5 mr-3" :class="iconClass(item)" />
-        <span class="text-[15px]">{{ item.label }}</span>
-        <span v-if="item.badge" class="ml-auto text-[12px] px-2 py-0.5 rounded-full" :class="badgeClass(item)">{{ item.badge }}</span>
-      </RouterLink>
-    </nav>
-
-    <!-- Quick KPIs -->
-    <div class="grid grid-cols-2 gap-3">
-      <div class="card p-3">
-        <div class="text-[11px] text-[color:var(--text-tertiary)]">This Month</div>
-        <div class="text-[17px] font-semibold text-[color:var(--text)]">₹{{ formatCurrency(monthlyRevenue) }}</div>
-      </div>
-      <div class="card p-3">
-        <div class="text-[11px] text-[color:var(--text-tertiary)]">Pending</div>
-        <div class="text-[17px] font-semibold text-[color:var(--text)]">{{ pendingOrders }}</div>
-      </div>
-    </div>
-  </aside>
+  </div>
 </template>
 
-<script>
-import { ref, computed } from 'vue';
-import { RouterLink, useRoute } from 'vue-router';
-import { HomeIcon, ChartBarIcon, ShoppingBagIcon, PlusCircleIcon, ClipboardDocumentListIcon, DocumentTextIcon, EyeIcon, UserIcon, BellIcon } from '@heroicons/vue/24/outline';
+<script setup>
+import { useRoute, useRouter } from 'vue-router';
+import { inject } from 'vue';
+import { HomeIcon, ChartBarIcon, ClipboardDocumentListIcon, CubeIcon, UserIcon, BellIcon, DocumentTextIcon } from '@heroicons/vue/24/outline'; 
 
-export default {
-  name: 'VendorSidebar',
-  components: { RouterLink, HomeIcon, ChartBarIcon, ShoppingBagIcon, PlusCircleIcon, ClipboardDocumentListIcon, DocumentTextIcon, EyeIcon, UserIcon, BellIcon },
-  setup() {
-    const route = useRoute();
-
-    const vendorProfile = ref({ name: 'Rajesh Kumar', businessName: 'Kumar Electronics', avatar: '/images/vendor-avatar.jpg' });
-    const monthlyRevenue = ref(125000);
-    const pendingOrders = ref(23);
-
-    const nav = ref([
-      { name: 'dashboard', label: 'Dashboard', to: { name: 'Dashboard' }, icon: 'HomeIcon' },
-      { name: 'analytics', label: 'Analytics', to: { name: 'Analytics' }, icon: 'ChartBarIcon' },
-      { name: 'products', label: 'Manage Products', to: { name: 'ManageProducts' }, icon: 'ShoppingBagIcon' },
-      { name: 'add', label: 'Add Product', to: { name: 'AddProduct' }, icon: 'PlusCircleIcon' },
-      { name: 'orders', label: 'Orders', to: { name: 'OrderFulfillment' }, icon: 'ClipboardDocumentListIcon', badge: pendingOrders.value ? String(pendingOrders.value) : null },
-      { name: 'invoices', label: 'Invoices', to: { name: 'Invoices' }, icon: 'DocumentTextIcon' },
-      { name: 'sales', label: 'Sales', to: { name: 'ViewSales' }, icon: 'EyeIcon' },
-      { name: 'account', label: 'Account', to: { name: 'Account' }, icon: 'UserIcon' },
-      { name: 'notifications', label: 'Notifications', to: { name: 'Notifications' }, icon: 'BellIcon' }
-    ]);
-
-    const isActive = (to) => {
-      if (to.name && route.name) return route.name === to.name;
-      return route.path === (typeof to === 'string' ? to : to.path);
-    };
-
-    const linkClass = (item) => ({
-      'bg-black/5': isActive(item.to),
-      'text-[color:var(--text)]': isActive(item.to),
-      'text-[color:var(--text)] hover:bg-black/3': !isActive(item.to),
-      'rounded-none': true
-    });
-
-    const iconClass = (item) => ({
-      'text-[color:var(--primary)]': isActive(item.to),
-      'text-[color:var(--text-tertiary)]': !isActive(item.to)
-    });
-
-    const badgeClass = (item) => ({
-      'bg-[color:var(--primary)] text-white': isActive(item.to),
-      'bg-black/10 text-[color:var(--text)]': !isActive(item.to)
-    });
-
-    const formatCurrency = (v) => new Intl.NumberFormat('en-IN').format(v);
-
-    // Sticky sidebar and width control
-    const wrapperClass = computed(() => 'w-[280px] sticky top-14 self-start');
-
-    return { vendorProfile, monthlyRevenue, pendingOrders, nav, linkClass, iconClass, badgeClass, formatCurrency, wrapperClass };
+const props = defineProps({
+  isOpen: {
+    type: Boolean,
+    required: true
   }
+});
+const emit = defineEmits(['close-sidebar']);
+
+const route = useRoute();
+const router = useRouter();
+const store = inject('store');
+
+const navItems = [
+  { name: 'Dashboard', path: '/', icon: HomeIcon },
+  { name: 'Reports', path: '/reports', icon: ChartBarIcon },
+  { name: 'My Tasks', path: '/tasks', icon: ClipboardDocumentListIcon }, 
+  { name: 'Products', path: '/products', icon: CubeIcon },
+  { name: 'Invoices', path: '/invoices', icon: DocumentTextIcon },
+  { name: 'Notifications', path: '/notifications', icon: BellIcon },
+  { name: 'Account', path: '/account', icon: UserIcon },
+];
+
+const logout = () => {
+  localStorage.removeItem('vendorAuthToken');
+  localStorage.removeItem('vendorUser');
+  store.isLoggedIn = false;
+  store.user = null;
+  emit('close-sidebar');
+  router.push({ name: 'Login' });
 };
 </script>
