@@ -3,9 +3,7 @@
   Purpose: Handles fetching product data for the client-facing shop, now supporting category filtering.
 */
 
-import api from './apiClient';
-
-const API_URL = '/products/';
+const API_URL = 'http://localhost:5000/api/products/';
 
 /**
  * Fetches all products from the backend.
@@ -14,11 +12,21 @@ const API_URL = '/products/';
  */
 const getProducts = async (categoryId = null) => {
   try {
-    const params = {};
-    if (categoryId) params.category = categoryId;
-    params.time = Date.now();
-    const { data } = await api.get('/products', { params });
-    return data;
+    let url = new URL(API_URL);
+    if (categoryId) {
+        // Append category ID as a query parameter for filtering
+        url.searchParams.append('category', categoryId);
+    }
+    url.searchParams.append('time', new Date().getTime());
+    
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch products');
+    }
+
+    return await response.json();
   } catch (error) {
     console.error('Failed to fetch products:', error);
     throw error;
@@ -27,8 +35,16 @@ const getProducts = async (categoryId = null) => {
 
 const getProductById = async (id) => {
   try {
-    const { data } = await api.get(`/products/${id}`, { params: { time: Date.now() } });
-    return data;
+    let url = new URL(`${API_URL}${id}`);
+    url.searchParams.append('time', new Date().getTime());
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch product');
+    }
+
+    return await response.json();
   } catch (error) {
     console.error('Failed to fetch product:', error);
     throw error;

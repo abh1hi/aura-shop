@@ -67,6 +67,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import vendorService from '../services/vendorService';
+import categoryService from '../services/categoryService';
 
 const router = useRouter();
 
@@ -87,11 +88,7 @@ const errorMessage = ref('');
 // Fetch categories from the public API
 const fetchCategories = async () => {
   try {
-    const response = await fetch('http://localhost:5000/api/categories');
-    if (!response.ok) {
-      throw new Error('Failed to fetch categories');
-    }
-    categories.value = await response.json();
+    categories.value = await categoryService.getCategories();
   } catch (err) {
     console.error('Error fetching categories:', err);
     errorMessage.value = 'Could not load categories.';

@@ -29,7 +29,7 @@
 </template>
 
 <script>
-import { requestPasswordReset } from '../services/authService.js';
+import authService from '../services/authService.js';
 
 export default {
   name: 'ForgotPassword',
@@ -47,7 +47,7 @@ export default {
       this.error = '';
       this.loading = true;
       try {
-        await requestPasswordReset(this.email);
+        await authService.requestPasswordReset(this.email);
         this.message = 'If an account exists for this email, a password reset link has been sent.';
       } catch (e) {
         this.error = e?.message || 'Failed to send reset email. Please try again later.';

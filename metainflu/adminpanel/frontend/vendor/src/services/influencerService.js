@@ -1,8 +1,6 @@
 // File: frontend/client/src/services/influencerService.js
 
-import api from './apiClient';
-
-const API_URL = '/influencers/';
+const API_URL = 'https://metainflu.onrender.com/api/influencers/';
 
 /**
  * Creates a new influencer profile.
@@ -10,10 +8,23 @@ const API_URL = '/influencers/';
  * @param {string} token - The user's JWT token.
  * @returns {Promise<object>} - A promise that resolves with the created profile data.
  */
-const createProfile = async (profileData) => {
+const createProfile = async (profileData, token) => {
   try {
-    const { data } = await api.post('/influencers/profile', profileData);
-    return data;
+    const response = await fetch(API_URL + 'profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create influencer profile');
+    }
+
+    return await response.json();
   } catch (error) {
     console.error('Profile creation failed:', error);
     throw error;

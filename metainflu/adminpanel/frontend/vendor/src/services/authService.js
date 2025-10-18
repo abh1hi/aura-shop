@@ -1,133 +1,114 @@
 /*
-  Vendor auth service for the vendor/admin panel.
-  Exposes helper functions used by the vendor panel router and components:
-  - login, logout
-  - isAuthenticated, isVendor
-  - getToken, getCurrentUser
-  - refreshToken, requestPasswordReset, resetPassword, updateProfile
-
-  This implementation stores the auth token and user info in localStorage
-  under the key 'vendorUser' (to avoid clashing with client/admin keys).
+  File: metainflu/frontend/client/src/services/authService.js
+  Purpose: This service is exclusively for the CLIENT-FACING storefront.
+  I have updated the API_URL to point to your local backend server.
 */
+const API_URL = 'http://localhost:5000/api/auth/';
 
-import api from './apiClient';
-
-const API_URL = '/auth/';
-
-const VENDOR_STORAGE_KEY = 'vendorUser';
-
-const saveVendorUser = (data) => {
+/**
+ * Registers a new CLIENT user by sending a POST request to the backend.
+ * All users registered through this function will have the default 'user' role.
+ * @param {object} userData - The user's registration data (name, email, password).
+ * @returns {Promise<object>} - A promise that resolves with the user data upon successful registration.
+ */
+const register = async (userData) => {
   try {
-    localStorage.setItem(VENDOR_STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.warn('Failed saving vendor user to localStorage', e);
-  }
-};
+    const response = await fetch(API_URL + 'register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
 
-const removeVendorUser = () => {
-  localStorage.removeItem(VENDOR_STORAGE_KEY);
-};
-
-const getVendorUser = () => {
-  try {
-    const raw = localStorage.getItem(VENDOR_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (e) {
-    return null;
-  }
-};
-
-const getToken = () => {
-  const u = getVendorUser();
-  return u && u.token ? u.token : null;
-};
-
-const isAuthenticated = async () => {
-  // Quick client-side check based on localStorage; real validation could ping an endpoint
-  return !!getToken();
-};
-
-const isVendor = async () => {
-  const u = getVendorUser();
-  return !!(u && (u.role === 'vendor' || u.role === 'admin'));
-};
-
-const login = async (credentials) => {
-  try {
-    const { data } = await api.post(API_URL + 'vendor/login', credentials);
-    // Expecting { token, user }
-    saveVendorUser(data);
-    return data;
-  } catch (err) {
-    console.error('Vendor login error', err);
-    throw err;
-  }
-};
-
-const register = async (payload) => {
-  try {
-    const { data } = await api.post(API_URL + 'register', payload);
-    // Optionally auto-login after register if backend returns token/user
-    if (data && data.token) {
-      saveVendorUser(data);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to register user');
     }
+
+    const data = await response.json();
+    // Save client user data to localStorage
+    if (data.token) {
+      localStorage.setItem('user', JSON.stringify(data));
+    }
+
     return data;
-  } catch (err) {
-    console.error('Vendor register error', err);
-    throw err;
+  } catch (error) {
+    console.error('Registration failed:', error);
+    throw error;
   }
 };
 
+/**
+ * Authenticates a CLIENT user by sending a POST request to the backend.
+ * @param {object} userData - The user's login credentials (email, password).
+ * @returns {Promise<object>} - A promise that resolves with the user data upon successful login.
+ */
+const login = async (userData) => {
+  try {
+    const response = await fetch(API_URL + 'login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to log in');
+    }
+
+    const data = await response.json();
+    // Save client user data to localStorage
+    if (data.token) {
+      localStorage.setItem('user', JSON.stringify(data));
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Login failed:', error);
+    throw error;
+  }
+};
+
+/**
+ * Logs out the current client user by removing their data from localStorage.
+ */
 const logout = () => {
-  removeVendorUser();
+  localStorage.removeItem('user');
 };
 
-// Optional helpers for profile & password flows
-const updateProfile = async (payload) => {
-  const token = getToken();
-  const { data } = await api.put(API_URL + 'profile', payload);
-  return data;
-};
-
+/**
+ * Sends a password reset request to the backend.
+ * @param {string} email - The user's email address.
+ * @returns {Promise<object>} - A promise that resolves with a success message.
+ */
 const requestPasswordReset = async (email) => {
-  const { data } = await api.post(API_URL + 'request-password', { email });
-  return data;
-};
+  try {
+    const response = await fetch(API_URL + 'request-password-reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
 
-const resetPassword = async (token, newPassword) => {
-  const { data } = await api.post(API_URL + `reset-password/${token}`, { password: newPassword });
-  return data;
-};
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to send password reset email');
+    }
 
-const refreshToken = async () => {
-  const token = getToken();
-  if (!token) throw new Error('No token');
-  const { data } = await api.post(API_URL + 'refresh');
-  if (data.token) {
-    const user = getVendorUser() || {};
-    saveVendorUser({ ...user, token: data.token });
+    return await response.json();
+  } catch (error) {
+    console.error('Password reset request failed:', error);
+    throw error;
   }
-  return data;
 };
 
-const getCurrentUser = () => {
-  const u = getVendorUser();
-  return u && u.user ? u.user : u;
-};
-
-const authService = {
-  login,
+export default {
   register,
+  login,
   logout,
-  isAuthenticated,
-  isVendor,
-  getToken,
-  getCurrentUser,
-  updateProfile,
   requestPasswordReset,
-  resetPassword,
-  refreshToken,
 };
-
-export default authService;
-export { login, register, logout, isAuthenticated, isVendor, getToken, getCurrentUser, updateProfile, requestPasswordReset, resetPassword, refreshToken };

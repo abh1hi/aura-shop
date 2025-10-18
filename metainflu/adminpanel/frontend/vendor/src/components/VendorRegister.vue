@@ -47,7 +47,7 @@
 </template>
 
 <script>
-import { register } from '../services/authService.js';
+import authService from '../services/authService.js';
 
 export default {
   name: 'VendorRegister',
@@ -72,7 +72,7 @@ export default {
       this.error = '';
       this.loading = true;
       try {
-        await register({
+        await authService.register({
           ...this.form,
           role: 'vendor'
         });

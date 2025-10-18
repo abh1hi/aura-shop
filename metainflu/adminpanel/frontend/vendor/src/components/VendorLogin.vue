@@ -58,11 +58,11 @@ const handleLogin = async () => {
   error.value = null;
   loading.value = true;
   try {
-    const data = await authService.login(email.value, password.value);
+    const data = await authService.login({ email: email.value, password: password.value });
     localStorage.setItem('vendorAuthToken', data.token);
-    localStorage.setItem('vendorUser', JSON.stringify(data.user)); // Assuming data.user contains user info
+    localStorage.setItem('vendorUser', JSON.stringify(data)); // Assuming data contains user info
     store.isLoggedIn = true;
-    store.user = data.user;
+    store.user = data;
     router.push({ name: 'Dashboard' });
   } catch (err) {
     error.value = err.message || 'Login failed. Please check your credentials.';

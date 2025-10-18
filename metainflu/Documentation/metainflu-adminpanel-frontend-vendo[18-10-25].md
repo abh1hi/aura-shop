@@ -1,7 +1,3 @@
-<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
-
-# mkae detailed documentation wirh all type of diagrams and develooper info , what technologies are used and how and where . and how to modify .for [metainflu/adminpanel/frontend/vendor] section and all its related frontend files. and export in .md format.
-
 Below is a comprehensive, developer-focused documentation for the vendor panel at metainflu/adminpanel/frontend/vendor. It includes technologies used, architecture, file-by-file map, how pieces connect to the backend, “why” design choices, how to modify/extend, and multiple Mermaid diagrams (flowcharts, sequence diagrams, ER/context diagrams) to visualize data and runtime flows. You can save this content as vendor-docs.md.
 
 Title: Aura Shop Vendor Panel — Architecture, Diagrams, and Developer Guide
