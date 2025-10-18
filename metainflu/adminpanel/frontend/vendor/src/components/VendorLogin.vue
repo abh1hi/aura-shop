@@ -1,43 +1,34 @@
-<!-- Example: src/components/VendorLogin.vue --><template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-bg p-4">
-    <div class="w-full max-w-md bg-gray-surface rounded-2xl shadow-lg p-6 sm:p-8">
-      <h2 class="text-2xl font-bold text-center text-gray-dark-text mb-6">Vendor Login</h2>
-      <form @submit.prevent="handleLogin">
-        <div class="mb-4">
-          <label for="email" class="block text-sm font-medium text-gray-text mb-1">Email</label>
-          <input
-            type="email"
-            id="email"
-            v-model="email"
-            class="w-full p-3 border border-gray-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue"
-            placeholder="john.doe@example.com"
-            required
-          />
-        </div>
-        <div class="mb-6">
-          <label for="password" class="block text-sm font-medium text-gray-text mb-1">Password</label>
-          <input
-            type="password"
-            id="password"
-            v-model="password"
-            class="w-full p-3 border border-gray-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue"
-            placeholder="••••••••"
-            required
-          />
-        </div>
-        <button
-          type="submit"
-          class="w-full bg-primary-blue text-white py-3 rounded-lg font-semibold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2 transition-colors duration-200"
-          :disabled="loading"
-        >
-          {{ loading ? 'Logging in...' : 'Login' }}
-        </button>
-        <p v-if="error" class="text-danger-red text-sm mt-4 text-center">{{ error }}</p>
-      </form>
-      <div class="mt-6 text-center">
-        <router-link to="/forgot-password" class="text-primary-blue hover:underline text-sm">Forgot Password?</router-link>
-        <p class="text-gray-text mt-3 text-sm">Don't have an account? <router-link to="/register" class="text-primary-blue hover:underline">Register</router-link></p>
+<!-- Example: src/components/VendorLogin.vue -->
+<template>
+  <div class="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <div>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Admin Panel Sign In
+        </h2>
       </div>
+      <form class="mt-8 space-y-6" @submit.prevent="handleLogin">
+        <div class="rounded-md shadow-sm -space-y-px">
+          <div>
+            <label for="email-address" class="sr-only">Email address</label>
+            <input id="email-address" name="email" type="email" autocomplete="email" required v-model="email" class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email address">
+          </div>
+          <div>
+            <label for="password" class="sr-only">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required v-model="password" class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Password">
+          </div>
+        </div>
+
+        <div v-if="error" class="text-red-500 text-sm">
+            {{ error }}
+        </div>
+
+        <div>
+          <button type="submit" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Sign in
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </template>
