@@ -1,367 +1,458 @@
-# Frontend Client Services — Developer Documentation
+# Frontend Client Services — Developer Documentation (Extended Edition)
 
-This document details each service in metainflu/frontend/client/src/services: what it does, how it’s used, request/response contracts, visual diagrams, improvement ideas, and edit examples. Services encapsulate all HTTP access to the backend API.
+This is an expanded, implementation-ready guide to all services in metainflu/frontend/client/src/services. It includes:
+- Per-file responsibilities, contracts, examples, and anti-patterns
+- Full axios migration with typed JSDoc, interceptors, retries, cancellation
+- Error taxonomy and normalization
+- Security and performance guidance
+- Visual diagrams for each service and cross-cutting flows
+- Testing blueprints (MSW + Vitest) and fixtures
 
-Tech stack
-- HTTP: fetch (native). Recommended migration: axios for interceptors/retries
-- Env: Vite env vars via import.meta.env.VITE_*
-- Auth state: localStorage ('user')
+Table of contents
+1) Architecture & conventions
+2) Shared http client (axios)
+3) Error model & handling
+4) Auth service
+5) Product service
+6) Category service
+7) Cart service
+8) Order service
+9) Vendor service (optional)
+10) Influencer service (legacy)
+11) Cross-cutting diagrams
+12) Testing: MSW + Vitest
+13) Security & privacy
+14) Performance & UX
+15) Migration checklist
+16) Appendix: Types, fixtures, and snippets
 
-Common patterns
-- Base URL: VITE_API_BASE_URL || http://localhost:5000
-- JSON headers: { 'Content-Type': 'application/json' }
-- Bearer token header when user exists
+---
+## 1) Architecture & conventions
 
-Common helper (suggested)
+Goals
+- Single-responsibility modules; no side effects at import time
+- Stable request/response contracts; normalize errors
+- Env-driven baseURL; never hardcode URLs in services
+- Token injection at http layer; services are oblivious to auth storage
+- Cancellable requests (AbortController)
+- Idempotency for payment/order writes
+
+Naming
+- Services: lowerCamel plural or domain (productService)
+- Methods: list/get/create/update/remove verbs
+- Boolean flags: auth=false for public endpoints
+
+Return shape
+- Either domain objects or paged envelopes: { data, page, pageSize, total }
+
+---
+## 2) Shared http client (axios)
+
+Create a small wrapper around axios for consistency.
+
+File: src/services/http.js
 ```js
-// src/services/http.js
+import axios from 'axios';
+
 const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-const build = (path) => `${BASE}/api${path}`;
+export const http = axios.create({
+  baseURL: `${BASE}/api`,
+  timeout: 15000,
+  headers: { 'Content-Type': 'application/json' },
+});
 
-export async function http(path, { method = 'GET', body, headers = {}, auth = true } = {}) {
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
-  const token = user?.token;
-  const h = { 'Content-Type': 'application/json', ...headers };
-  if (auth && token) h.Authorization = `Bearer ${token}`;
-
-  const res = await fetch(build(path), { method, headers: h, body: body ? JSON.stringify(body) : undefined });
-  if (!res.ok) {
-    let err;
-    try { err = await res.json(); } catch { err = { message: res.statusText }; }
-    throw new Error(err.message || `HTTP ${res.status}`);
+// Request interceptor: auth header, request id, abort support
+http.interceptors.request.use((cfg) => {
+  // Add Authorization if token exists
+  const raw = localStorage.getItem('user');
+  const user = raw ? JSON.parse(raw) : null;
+  if (user?.token && cfg.headers && !cfg.headers.Authorization) {
+    cfg.headers.Authorization = `Bearer ${user.token}`;
   }
-  if (res.status === 204) return null;
-  return res.json();
+  // Assign a request id for logging/tracing
+  cfg.headers['X-Request-Id'] = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+  return cfg;
+});
+
+// Response interceptor: normalize errors; 401 handling
+http.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const status = err?.response?.status;
+    const message = err?.response?.data?.message || err.message || 'Request failed';
+    const code = err?.code || 'HTTP_ERROR';
+
+    // Global 401 handling: clear user and optionally redirect
+    if (status === 401) {
+      try { localStorage.removeItem('user'); } catch {}
+      // Optionally: window.location.assign('/login');
+    }
+
+    return Promise.reject({ status, message, code, details: err?.response?.data || null });
+  }
+);
+
+// Helper for cancellation
+export function withAbort(signal) {
+  return { signal };
 }
 ```
 
-Service overview
-```mermaid
-flowchart LR
-  Pages --> AuthService
-  Pages --> ProductService
-  Pages --> CartService
-  Pages --> OrderService
-  Pages --> CategoryService
-  Pages --> VendorService
-  AuthService -->|Bearer token| LocalStorage[(localStorage)]
-  AllServices -->|HTTP| API[/Express /api/*]
+Retries (optional)
+```js
+// Example: simple manual retry wrapper
+export async function withRetry(fn, { retries = 2, delay = 250 } = {}) {
+  let lastErr;
+  for (let i = 0; i <= retries; i++) {
+    try { return await fn(); } catch (e) { lastErr = e; if (i < retries) await new Promise(r => setTimeout(r, delay)); }
+  }
+  throw lastErr;
+}
 ```
 
 ---
-## authService.js
-Purpose: Customer registration/login/logout. Persists user to localStorage under key 'user'.
+## 3) Error model & handling
 
-Endpoints
-- POST /api/auth/register
-- POST /api/auth/login
+Error taxonomy
+- NetworkError: no response (offline, CORS, DNS)
+- HttpError: response with non-2xx status
+- ValidationError: 400 with field errors { fieldErrors: { field: msg } }
+- AuthError: 401/403
+- RateLimitError: 429
+- ServerError: 5xx
 
-Sequence: login
-```mermaid
-sequenceDiagram
-  participant UI as Client
-  participant S as authService
-  participant API as /api/auth
-  UI->>S: login({email,password})
-  S->>API: POST /login
-  API-->>S: { _id, name, email, role, token }
-  S->>LocalStorage: setItem('user', json)
-  S-->>UI: user data
-```
-
-Current (fetch-based) simplified usage
-```js
-import auth from '@/services/authService';
-const user = await auth.login({ email, password });
-```
-
-Edit example: add forgot/reset password
-```js
-const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000') + '/api/auth/';
-export async function requestPassword(email){
-  return fetch(API_URL + 'request-password', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }).then(r=>r.json());
-}
-export async function resetPassword(token, password){
-  return fetch(API_URL + `reset-password/${token}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password }) }).then(r=>r.json());
-}
-```
-
-Improvements
-- Use axios + interceptors; unify error handling
-- Store only token in storage; cache user separately to reduce exposure
-- Prefer HttpOnly cookies (requires backend change)
-- Add typed response models (with TS) or JSDoc typedefs
-
----
-## productService.js
-Purpose: Product browse and detail.
-
-Endpoints
-- GET /api/products?category=All|<id>
-- GET /api/products/:id
-
-Sequence: list products with category filter
-```mermaid
-sequenceDiagram
-  participant UI as Product List Page
-  participant S as productService
-  participant API as /api/products
-  UI->>S: list({category})
-  S->>API: GET /products?category={id|All}
-  API-->>S: [Product]
-  S-->>UI: Products array
-```
-
-Example API contract
+Normalize to a common shape
 ```ts
-// Product (subset)
-interface Product {
-  _id: string;
-  name: string;
-  images?: { url: string; altText?: string }[];
-  categories?: { _id: string; name: string }[];
-  variants?: { sku: string; price: number; stock: number }[];
-}
+/**
+ * @typedef {Object} ServiceError
+ * @property {number|undefined} status
+ * @property {string} message
+ * @property {string} code
+ * @property {any} details
+ */
 ```
 
-Edit example: add pagination and search
+Usage at callsites
 ```js
-export async function list({ category='All', page=1, limit=20, q='' }={}){
-  const params = new URLSearchParams({ category, page, limit, q }).toString();
-  const res = await fetch(`/api/products?${params}`);
-  if(!res.ok) throw new Error('Failed to load products');
-  return res.json();
+try {
+  const { data } = await productService.list({ page:1 });
+} catch (e) {
+  // e: ServiceError
+  toast.error(e.message);
 }
 ```
-
-Improvements
-- Add caching (in-memory or SWR-style) for category lists
-- Support abort signals for rapid filter changes
-- Select only fields needed (backend support)
 
 ---
-## cartService.js
-Purpose: Manage shopping cart lifecycle.
+## 4) Auth service
 
-Typical endpoints (depending on backend routes)
-- GET /api/cart
-- POST /api/cart/add
-- PUT /api/cart/update/:itemId
-- DELETE /api/cart/remove/:itemId
-- DELETE /api/cart (clear)
-
-Flow: add to cart
-```mermaid
-sequenceDiagram
-  participant UI as PDP
-  participant S as cartService
-  participant API as /api/cart
-  UI->>S: addItem(productId, qty)
-  S->>API: POST /cart/add
-  API-->>S: Cart
-  S-->>UI: Update state
-```
-
-Edit examples
+File: src/services/authService.js (axios version)
 ```js
 import { http } from './http';
-export const getCart = () => http('/cart');
-export const addItem = (productId, quantity=1, attrs={}) => http('/cart/add', { method:'POST', body:{ productId, quantity, ...attrs } });
-export const updateItem = (itemId, patch) => http(`/cart/update/${itemId}`, { method:'PUT', body: patch });
-export const removeItem = (itemId) => http(`/cart/remove/${itemId}`, { method:'DELETE' });
-export const clearCart = () => http('/cart', { method:'DELETE' });
+
+const prefix = '/auth';
+
+/**
+ * @typedef {Object} User
+ * @property {string} _id
+ * @property {string} name
+ * @property {string} email
+ * @property {('user'|'vendor'|'admin')} role
+ * @property {string} token
+ */
+
+/** @param {{name:string,email:string,password:string}} payload */
+export async function register(payload) {
+  const res = await http.post(`${prefix}/register`, payload, { headers: { 'X-Op': 'register' }, auth: false });
+  const user = res.data; try { localStorage.setItem('user', JSON.stringify(user)); } catch {}
+  return user;
+}
+
+/** @param {{email:string,password:string}} payload */
+export async function login(payload) {
+  const res = await http.post(`${prefix}/login`, payload, { headers: { 'X-Op': 'login' }, auth: false });
+  const user = res.data; try { localStorage.setItem('user', JSON.stringify(user)); } catch {}
+  return user;
+}
+
+export function logout() { try { localStorage.removeItem('user'); } catch {} }
+
+// Optional extras
+export async function requestPassword(email) { return (await http.post(`${prefix}/request-password`, { email })).data; }
+export async function resetPassword(token, password) { return (await http.post(`${prefix}/reset-password/${token}`, { password })).data; }
+```
+
+Diagram: login flow
+```mermaid
+sequenceDiagram
+  participant UI
+  participant Auth as authService
+  participant API as /api/auth
+  UI->>Auth: login({email,password})
+  Auth->>API: POST /login
+  API-->>Auth: { user, token }
+  Auth->>LocalStorage: persist
+  Auth-->>UI: user
 ```
 
 Improvements
-- Mirror server cart in Pinia for instant UI updates
-- Optimistic updates with rollback on error
-- Persist local cart for guests, merge on login
+- Switch to HttpOnly cookies + CSRF token (backend change)
+- Add refresh-token flow: /auth/refresh returning new access token
+- Track lastLogin, mfaRequired flags
 
 ---
-## orderService.js
-Purpose: Create orders and query order history.
+## 5) Product service
 
-Endpoints
-- POST /api/orders
-- GET /api/orders/myorders
-- GET /api/orders/:id
-- PUT /api/orders/:id/pay
+File: src/services/productService.js
+```js
+import { http, withAbort } from './http';
 
-Flow: checkout → create order
+/** @typedef {{ _id:string, name:string, images?:{url:string,altText?:string}[], variants?:{sku:string,price:number,stock:number}[], categories?:{_id:string,name:string}[] }} Product */
+
+/** @param {{ category?:string, page?:number, limit?:number, q?:string, signal?:AbortSignal }} params */
+export async function list({ category='All', page=1, limit=20, q='', signal } = {}) {
+  const res = await http.get('/products', { params: { category, page, limit, q }, ...withAbort(signal) });
+  return { data: res.data, page, limit, total: Number(res.headers['x-total-count'] || res.data.length) };
+}
+
+/** @param {string} id */
+export async function get(id, { signal } = {}) {
+  const res = await http.get(`/products/${id}`, withAbort(signal));
+  return res.data;
+}
+```
+
+Diagram: product search
+```mermaid
+flowchart LR
+  FilterUI -->|debounced q| list()
+  list --> http
+  http --> /api/products
+```
+
+Improvements
+- Support field selection: fields=name,images to reduce payload
+- Server-driven pagination + total count header
+- Cache recent queries (LRU in-memory) with TTL
+
+---
+## 6) Category service
+
+File: src/services/categoryService.js
+```js
+import { http } from './http';
+
+export async function list() {
+  const res = await http.get('/categories', { auth: false });
+  return res.data;
+}
+```
+
+Diagram
+```mermaid
+flowchart LR
+  UI --> CategoryService --> /api/categories --> MongoDB
+```
+
+Improvements
+- Cache in Pinia store; refresh every 12h
+
+---
+## 7) Cart service
+
+File: src/services/cartService.js
+```js
+import { http } from './http';
+
+export const get = async () => (await http.get('/cart')).data;
+export const add = async (productId, quantity=1, attrs={}) => (await http.post('/cart/add', { productId, quantity, ...attrs })).data;
+export const update = async (itemId, patch) => (await http.put(`/cart/update/${itemId}`, patch)).data;
+export const remove = async (itemId) => (await http.delete(`/cart/remove/${itemId}`)).data;
+export const clear = async () => (await http.delete('/cart')).data;
+```
+
+Diagram: optimistic add-to-cart
+```mermaid
+sequenceDiagram
+  participant UI
+  participant Cart as cartService
+  UI->>UI: optimistic add
+  UI->>Cart: POST /cart/add
+  Cart-->>UI: server cart
+  UI->>UI: reconcile on success/fail
+```
+
+Improvements
+- Idempotency key header for add to prevent duplicates on retry
+- Merge local guest cart on login
+
+---
+## 8) Order service
+
+File: src/services/orderService.js
+```js
+import { http } from './http';
+
+export const create = async (payload) => (await http.post('/orders', payload)).data;
+export const mine = async () => (await http.get('/orders/myorders')).data;
+export const get = async (id) => (await http.get(`/orders/${id}`)).data;
+export const pay = async (id, payment) => (await http.put(`/orders/${id}/pay`, payment)).data;
+```
+
+Diagram: checkout
 ```mermaid
 sequenceDiagram
   participant UI as Checkout
-  participant S as orderService
+  participant Orders as orderService
   participant API as /api/orders
-  UI->>S: createOrder({ address, payment })
-  S->>API: POST /orders
-  API-->>S: Order
-  S-->>UI: Navigate to confirmation
-```
-
-Edit examples
-```js
-import { http } from './http';
-export const createOrder = (payload) => http('/orders', { method:'POST', body: payload });
-export const myOrders = () => http('/orders/myorders');
-export const getOrder = (id) => http(`/orders/${id}`);
-export const payOrder = (id, payment) => http(`/orders/${id}/pay`, { method:'PUT', body: payment });
+  UI->>Orders: create(payload)
+  Orders->>API: POST /orders
+  API-->>Orders: Order
+  Orders-->>UI: Navigate to confirmation
 ```
 
 Improvements
-- Ensure price/total display uses server-confirmed amounts
-- Add retry for idempotent fetches; never retry payments without idempotency keys
+- Use server-calculated totals only; distrust client totals
+- Webhooks for payment status changes
 
 ---
-## categoryService.js
-Purpose: Fetch categories for filtering and forms.
+## 9) Vendor service (optional in customer app)
 
-Endpoint
-- GET /api/categories
+File: src/services/vendorService.js
+```js
+import { http } from './http';
+export const profile = async (id) => (await http.get(`/vendor/profile/${id}`)).data;
+export const products = async (vendorId, params) => (await http.get(`/vendor/products/${vendorId}`, { params })).data;
+```
 
 Diagram
 ```mermaid
 flowchart LR
-  UI --> categoryService --> /api/categories --> DB
-```
-
-Example
-```js
-import { http } from './http';
-export const listCategories = () => http('/categories', { auth: false });
+  UI --> VendorService --> /api/vendor/*
 ```
 
 Improvements
-- Cache categories in memory (Pinia) and refresh periodically
+- Guard calls in client by role when relevant; always enforce on server
 
 ---
-## vendorService.js
-Purpose: Storefront-side vendor interactions (if available to customers), or shared vendor info.
-
-Possible endpoints
-- GET /api/vendor/profile/:id
-- GET /api/vendor/products/:vendorId
-
-Diagram
-```mermaid
-flowchart LR
-  UI --> vendorService --> /api/vendor/*
-```
-
-Example
-```js
-import { http } from './http';
-export const getVendorProfile = (id) => http(`/vendor/profile/${id}`);
-export const getVendorProducts = (vendorId, params={}) => {
-  const qs = new URLSearchParams(params).toString();
-  return http(`/vendor/products/${vendorId}?${qs}`);
-};
-```
-
-Improvements
-- Enforce role checks server-side; restrict vendor-only data
+## 10) Influencer service (legacy)
+- If not used, mark deprecated and schedule removal.
 
 ---
-## influencerService.js (legacy/optional)
-Purpose: Leftover integration stubs for influencer features.
+## 11) Cross-cutting diagrams
 
-Action
-- If unused, deprecate and remove to reduce bundle size and complexity.
-
----
-## sequenceDiagram.md
-Purpose: Developer note for API flow visualization. Keep it aligned with code.
-
----
-## Cross-cutting visualizations
-
-End-to-end page → service → API
+End-to-end
 ```mermaid
 sequenceDiagram
-  participant Page as Vue Page
-  participant SVC as Service
-  participant API as Express API
-  participant DB as MongoDB
-  Page->>SVC: call()
-  SVC->>API: HTTP
-  API->>DB: Query
-  DB-->>API: Result
-  API-->>SVC: JSON
-  SVC-->>Page: Data
+  participant Page
+  participant Service
+  participant HTTP as Axios
+  participant API
+  participant DB
+  Page->>Service: call()
+  Service->>HTTP: request
+  HTTP->>API: /api/*
+  API->>DB: query
+  DB-->>API: rows
+  API-->>HTTP: 200 JSON
+  HTTP-->>Service: data
+  Service-->>Page: resolve
 ```
 
-Error handling flow
+Error normalization
 ```mermaid
 flowchart TD
-  Call[Service call] --> try{try/catch}
-  try -->|ok| ok[Return data]
-  try -->|throw| err[Normalize error]
-  err --> toast[Show toast]
-  err --> metrics[Log/metrics]
+  RawErr[Axios error] --> Parse[Extract status/message]
+  Parse --> Shape[{status,message,code,details}]
+  Shape --> Caller[Callsite shows toast/logs]
+```
+
+Cancellation
+```mermaid
+sequenceDiagram
+  participant UI
+  participant Controller as AbortController
+  participant S as Service
+  UI->>Controller: create()
+  UI->>S: list({ signal })
+  UI->>Controller: abort() on route change
 ```
 
 ---
-## How to improve services (summary)
-- Introduce http.js wrapper (or axios) with:
-  - Base URL handling
-  - Authorization header injection
-  - JSON parsing & error normalization
-  - 401 interceptor to logout/redirect
-  - Support AbortController for cancellation
-- Add TypeScript types or JSDoc typedefs
-- Co-locate service tests (unit with MSW or fetch-mock)
-- Add idempotency for payment/checkout flows
+## 12) Testing: MSW + Vitest
 
----
-## Editing guide (recipes)
-
-Add a new service file (wishlistService.js)
-```js
-// src/services/wishlistService.js
-import { http } from './http';
-export const list = () => http('/wishlist');
-export const add = (productId) => http('/wishlist', { method:'POST', body: { productId } });
-export const remove = (productId) => http(`/wishlist/${productId}`, { method:'DELETE' });
+Setup
+```bash
+npm i -D msw vitest @vitest/ui @testing-library/vue whatwg-fetch
 ```
 
-Consume in a page
-```vue
-<script setup>
-import { ref, onMounted } from 'vue';
-import * as wishlist from '@/services/wishlistService';
-const items = ref([]);
-
-onMounted(async ()=>{ items.value = await wishlist.list(); });
-</script>
-```
-
-Testing with MSW (outline)
+handlers.js
 ```js
-import { setupServer } from 'msw/node';
 import { rest } from 'msw';
-import { list } from '@/services/wishlistService';
+const BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000') + '/api';
+export const handlers = [
+  rest.post(`${BASE}/auth/login`, (req, res, ctx) => res(ctx.json({ _id:'u1', name:'A', email:'a@b.c', role:'user', token:'t' }))),
+  rest.get(`${BASE}/products`, (req, res, ctx) => res(ctx.set('x-total-count','1'), ctx.json([{ _id:'p1', name:'P' }]))),
+];
+```
 
-const server = setupServer(
-  rest.get('http://localhost:5000/api/wishlist', (req, res, ctx) => {
-    return res(ctx.json([{ _id:'1', name:'Sample' }]));
-  })
-);
+service.test.ts
+```ts
+import { setupServer } from 'msw/node';
+import { handlers } from './handlers';
+import * as auth from '@/services/authService';
 
+const server = setupServer(...handlers);
 beforeAll(()=>server.listen());
 afterEach(()=>server.resetHandlers());
 afterAll(()=>server.close());
 
-test('list wishlist', async () => {
-  const data = await list();
-  expect(data).toHaveLength(1);
+test('login stores user', async () => {
+  const user = await auth.login({ email:'a@b.c', password:'x' });
+  expect(user.token).toBeTruthy();
+  expect(JSON.parse(localStorage.getItem('user')||'null')).toBeTruthy();
 });
 ```
 
 ---
-## Security notes
-- Consider moving from localStorage token to HttpOnly cookie + CSRF token
-- Redact sensitive error messages
-- Never expose admin/vendor-only endpoints in the client app
+## 13) Security & privacy
+- Prefer HttpOnly cookies + CSRF for auth (backend work)
+- Don’t log PII; mask emails in logs
+- Use Content-Security-Policy to reduce XSS risk (in index.html)
+- Encrypt local persisted data if keeping user beyond token
+
+---
+## 14) Performance & UX
+- Debounce search inputs; cancel previous requests
+- Preload critical routes using router prefetch
+- Use HTTP caching headers for categories; implement ETag
+- Lazy-load large pages and chart libs
+
+---
+## 15) Migration checklist (fetch -> axios)
+- [ ] Add http.js and interceptors
+- [ ] Update each service to use http
+- [ ] Remove duplicate base URLs
+- [ ] Add 401 global handling
+- [ ] Add cancellation to list/search methods
+- [ ] Add tests with MSW
+
+---
+## 16) Appendix: Types & fixtures
+
+Common types (JSDoc)
+```ts
+/** @typedef {{_id:string,name:string}} Category */
+/** @typedef {{sku:string,price:number,stock:number}} Variant */
+/** @typedef {{url:string,altText?:string}} Image */
+/** @typedef {{_id:string,name:string,images?:Image[],variants?:Variant[],categories?:Category[]}} Product */
+/** @typedef {{_id:string,items:any[],total:number,status:string}} Order */
+```
+
+Fixtures (tests)
+```js
+export const fxUser = { _id:'u1', name:'User', email:'u@e.com', role:'user', token:'tok' };
+export const fxProduct = { _id:'p1', name:'Tee', images:[{url:'/img.png'}], variants:[{sku:'sku1',price:9.99,stock:5}] };
+```
 
 ---
 Last updated: Oct 2025
