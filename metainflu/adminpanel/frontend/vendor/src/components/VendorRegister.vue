@@ -1,89 +1,85 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-    <div class="w-full max-w-md bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">Create your vendor account</h2>
-      <p class="text-sm text-gray-600 mb-6">Join Aura Shop and start selling in minutes.</p>
+  <div class="min-h-screen flex items-center justify-center bg-background p-4">
+    <div class="w-full max-w-md">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-text-primary">Create your Vendor Account</h1>
+        <p class="text-text-secondary">Join us and start selling</p>
+      </div>
 
       <form @submit.prevent="submit" class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">First name</label>
-            <input v-model.trim="form.firstName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label class="block text-sm font-medium text-text-secondary">First name</label>
+            <input v-model.trim="form.firstName" required class="mt-1 block w-full px-4 py-3 bg-gray-100 border-transparent rounded-lg focus:ring-primary focus:border-primary" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Last name</label>
-            <input v-model.trim="form.lastName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label class="block text-sm font-medium text-text-secondary">Last name</label>
+            <input v-model.trim="form.lastName" required class="mt-1 block w-full px-4 py-3 bg-gray-100 border-transparent rounded-lg focus:ring-primary focus:border-primary" />
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Business name</label>
-          <input v-model.trim="form.businessName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <label class="block text-sm font-medium text-text-secondary">Business name</label>
+          <input v-model.trim="form.businessName" required class="mt-1 block w-full px-4 py-3 bg-gray-100 border-transparent rounded-lg focus:ring-primary focus:border-primary" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input v-model.trim="form.email" type="email" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <label class="block text-sm font-medium text-text-secondary">Email</label>
+          <input v-model.trim="form.email" type="email" required class="mt-1 block w-full px-4 py-3 bg-gray-100 border-transparent rounded-lg focus:ring-primary focus:border-primary" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-          <input v-model.trim="form.password" type="password" minlength="6" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-          <input v-model.trim="form.phone" type="tel" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <label class="block text-sm font-medium text-text-secondary">Password</label>
+          <input v-model.trim="form.password" type="password" minlength="6" required class="mt-1 block w-full px-4 py-3 bg-gray-100 border-transparent rounded-lg focus:ring-primary focus:border-primary" />
         </div>
 
-        <button type="submit" :disabled="loading" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg py-2.5 transition disabled:opacity-60">{{ loading ? 'Creating account...' : 'Create account' }}</button>
+        <button type="submit" :disabled="loading" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+          {{ loading ? 'Creating account...' : 'Create account' }}
+        </button>
       </form>
 
-      <div v-if="message" class="mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{{ message }}</div>
-      <div v-if="error" class="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ error }}</div>
+      <div v-if="message" class="mt-4 text-center text-sm text-green-600">{{ message }}</div>
+      <div v-if="error" class="mt-4 text-center text-sm text-danger">{{ error }}</div>
 
-      <p class="text-sm text-gray-600 mt-6 text-center">
-        Already have an account?
-        <router-link :to="{ name: 'Login' }" class="text-blue-600 hover:text-blue-700 font-medium">Sign in</router-link>
-      </p>
+      <div class="mt-6 text-center text-sm text-text-secondary">
+        Already have an account? <router-link :to="{ name: 'Login' }" class="font-medium text-primary hover:underline">Sign in</router-link>
+      </div>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import authService from '../services/authService.js';
 
-export default {
-  name: 'VendorRegister',
-  data() {
-    return {
-      form: {
-        firstName: '',
-        lastName: '',
-        businessName: '',
-        email: '',
-        password: '',
-        phone: ''
-      },
-      loading: false,
-      message: '',
-      error: ''
-    };
-  },
-  methods: {
-    async submit() {
-      this.message = '';
-      this.error = '';
-      this.loading = true;
-      try {
-        await authService.register({
-          ...this.form,
-          role: 'vendor'
-        });
-        this.message = 'Account created! Please check your email to verify, then sign in.';
-        setTimeout(() => this.$router.push({ name: 'Login' }), 1500);
-      } catch (e) {
-        this.error = e?.message || 'Registration failed. Please review your details and try again.';
-      } finally {
-        this.loading = false;
-      }
-    }
+const router = useRouter();
+
+const form = ref({
+  firstName: '',
+  lastName: '',
+  businessName: '',
+  email: '',
+  password: '',
+  phone: ''
+});
+
+const loading = ref(false);
+const message = ref('');
+const error = ref('');
+
+const submit = async () => {
+  message.value = '';
+  error.value = '';
+  loading.value = true;
+  try {
+    await authService.register({
+      ...form.value,
+      role: 'vendor'
+    });
+    message.value = 'Account created! Please check your email to verify, then sign in.';
+    setTimeout(() => router.push({ name: 'Login' }), 1500);
+  } catch (e) {
+    error.value = e?.message || 'Registration failed. Please review your details and try again.';
+  } finally {
+    loading.value = false;
   }
 };
 </script>

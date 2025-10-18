@@ -1,31 +1,23 @@
 <template>
-  <nav class="fixed bottom-0 left-0 right-0 bg-gray-surface shadow-lg border-t border-gray-border lg:hidden z-40">
-    <ul class="flex justify-around py-3">
-      <li v-for="item in navItems" :key="item.name">
-        <router-link
-          :to="item.path"
-          :class="['flex flex-col items-center text-xs',
-                   route.path === item.path ? 'text-primary-blue font-semibold' : 'text-gray-text']"
-        >
-          <component :is="item.icon" class="w-6 h-6 mb-1" />
-          <span>{{ item.name }}</span>
-        </router-link>
-      </li>
-    </ul>
+  <nav class="fixed bottom-0 left-0 right-0 bg-surface border-t border-border lg:hidden z-40">
+    <div class="flex justify-around">
+      <router-link v-for="item in navItems" :key="item.name" :to="item.path" class="flex flex-col items-center justify-center w-full py-2 text-text-secondary"
+        v-slot="{ isActive }">
+        <component :is="isActive ? item.solidIcon : item.outlineIcon" class="w-6 h-6" :class="[isActive ? 'text-primary' : '']" />
+        <span class="text-xs mt-1" :class="[isActive ? 'text-primary' : '']">{{ item.name }}</span>
+      </router-link>
+    </div>
   </nav>
 </template>
 
 <script setup>
-import { useRoute } from 'vue-router';
-// Icons (placeholder)
-import { HomeIcon, ChartBarIcon, ClipboardDocumentListIcon, CubeIcon } from '@heroicons/vue/24/outline';
-
-const route = useRoute();
+import { HomeIcon as HomeIconOutline, ChartBarIcon as ChartBarIconOutline, ClipboardDocumentListIcon as ClipboardDocumentListIconOutline, CubeIcon as CubeIconOutline } from '@heroicons/vue/24/outline';
+import { HomeIcon as HomeIconSolid, ChartBarIcon as ChartBarIconSolid, ClipboardDocumentListIcon as ClipboardDocumentListIconSolid, CubeIcon as CubeIconSolid } from '@heroicons/vue/24/solid';
 
 const navItems = [
-  { name: 'Home', path: '/', icon: HomeIcon },
-  { name: 'Reports', path: '/reports', icon: ChartBarIcon },
-  { name: 'Tasks', path: '/tasks', icon: ClipboardDocumentListIcon },
-  { name: 'Products', path: '/products', icon: CubeIcon },
+  { name: 'Home', path: '/', outlineIcon: HomeIconOutline, solidIcon: HomeIconSolid },
+  { name: 'Reports', path: '/reports', outlineIcon: ChartBarIconOutline, solidIcon: ChartBarIconSolid },
+  { name: 'Tasks', path: '/tasks', outlineIcon: ClipboardDocumentListIconOutline, solidIcon: ClipboardDocumentListIconSolid },
+  { name: 'Products', path: '/products', outlineIcon: CubeIconOutline, solidIcon: CubeIconSolid },
 ];
 </script>
