@@ -33,7 +33,7 @@ const corsOptions = {
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 'http://localhost:5174',
-'http://127.0.0.1:5174','https://3czzqk3l-5173.use2.devtunnels.ms'],
+'http://127.0.0.1:5174','https://3czzqk3l-5173.use2.devtunnels.ms','https://reimagined-space-pancake-x5rvrvpwwq5r3px6g-5173.app.github.dev',],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -44,9 +44,9 @@ app.use(express.json());
 
 // Database Connection
 // NOTE: Make sure your MONGO_URI environment variable is set for the connection to succeed.
-mongoose.connect(mongoURI || 'mongodb://localhost:27017/aura-shop', {
+mongoose.connect('mongodb://youruser:yourpassword@localhost:27017/admin', {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
 })
 .then(() => console.log('✅ Connected to MongoDB Atlas'))
 .catch(err => {

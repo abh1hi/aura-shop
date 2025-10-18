@@ -3,7 +3,7 @@
   Purpose: This service is exclusively for the CLIENT-FACING storefront.
   I have updated the API_URL to point to your local backend server.
 */
-const API_URL = 'http://localhost:5000/api/auth/';
+const API_URL = 'https://reimagined-space-pancake-x5rvrvpwwq5r3px6g-5000.app.github.dev/api/auth/';
 
 /**
  * Registers a new CLIENT user by sending a POST request to the backend.
