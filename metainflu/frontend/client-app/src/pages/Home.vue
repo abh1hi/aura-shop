@@ -34,7 +34,7 @@
 
     <main class="main-content">
       <!-- Hero Collection Banner -->
-      <section class="hero-banner" v-touch:swipe.left="nextHeroBanner" v-touch:swipe.right="prevHeroBanner">
+      <section class="hero-banner" v-if="currentHeroBanner" v-touch:swipe.left="nextHeroBanner" v-touch:swipe.right="prevHeroBanner">
         <div class="hero-content">
           <div class="hero-image">
             <img :src="currentHeroBanner.image" :alt="currentHeroBanner.title" />
@@ -165,6 +165,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
 import productService from '../services/productService'
+import homeService from '../services/homeService'
 
 const router = useRouter()
 
@@ -179,43 +180,13 @@ const tabsContainer = ref(null)
 const productsCarousel = ref(null)
 
 // Category tabs
-const categoryTabs = ['Limited', 'Recommended', 'New in', 'Trendy']
+const categoryTabs = ref(['Limited', 'Recommended', 'New in', 'Trendy'])
 
 // Hero banners
-const heroBanners = ref([
-  {
-    title: 'Summer 2024 Best Collection',
-    subtitle: 'Available online and in store',
-    cta: 'View shop →',
-    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80'
-  },
-  {
-    title: 'New Winter Collection',
-    subtitle: 'Cozy and stylish pieces',
-    cta: 'Explore →',
-    image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&q=80'
-  },
-  {
-    title: 'Street Style Essentials',
-    subtitle: 'Urban fashion redefined',
-    cta: 'Shop now →',
-    image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&q=80'
-  }
-])
+const heroBanners = ref([])
 
 // Featured collections
-const featuredCollections = ref([
-  {
-    name: 'Minimalist Basics',
-    description: 'Clean lines, neutral colors',
-    image: 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&q=80'
-  },
-  {
-    name: 'Urban Street',
-    description: 'Bold and contemporary',
-    image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600&q=80'
-  }
-])
+const featuredCollections = ref([])
 
 // Computed properties
 const currentHeroBanner = computed(() => heroBanners.value[currentBannerIndex.value])
@@ -231,16 +202,16 @@ const newArrivals = computed(() => {
           name: product.name,
           price: variant.price,
           images: variant.images?.length > 0 ? [{ url: variant.images[0] }] : product.images,
-          rating: 4.8,
-          reviews: Math.floor(Math.random() * 500) + 50
+          rating: product.ratings.average,
+          reviews: product.ratings.count
         })
       })
     } else {
       allVariants.push({
         ...product,
         id: product._id,
-        rating: 4.8,
-        reviews: Math.floor(Math.random() * 500) + 50
+        rating: product.ratings.average,
+        reviews: product.ratings.count
       })
     }
   })
@@ -255,9 +226,11 @@ const trendingProducts = computed(() => {
 const bannerInterval = ref(null)
 
 const startBannerRotation = () => {
-  bannerInterval.value = setInterval(() => {
-    currentBannerIndex.value = (currentBannerIndex.value + 1) % heroBanners.value.length
-  }, 5000)
+  if (heroBanners.value.length > 1) {
+    bannerInterval.value = setInterval(() => {
+      currentBannerIndex.value = (currentBannerIndex.value + 1) % heroBanners.value.length
+    }, 5000)
+  }
 }
 
 const stopBannerRotation = () => {
@@ -329,7 +302,7 @@ const onProductsScroll = () => {
 }
 
 const onSwipe = (event) => {
-  console.log('Swipe detected:', event)
+  
 }
 
 // Fetch products
@@ -337,13 +310,37 @@ const fetchProducts = async () => {
   try {
     products.value = await productService.getProducts()
   } catch (error) {
-    console.error('Failed to fetch products:', error)
+    
   }
+}
+
+const fetchHeroBanners = async () => {
+  try {
+    heroBanners.value = await homeService.getHeroBanners()
+  } catch (error) {
+    
+  }
+}
+
+const fetchFeaturedCollections = async () => {
+  try {
+    featuredCollections.value = await homeService.getFeaturedCollections()
+  } catch (error) {
+    
+  }
+}
+
+const fetchCategoryTabs = async () => {
+  // For now, we use hardcoded values
+  // In the future, this could be fetched from an API
 }
 
 // Lifecycle hooks
 onMounted(async () => {
   await fetchProducts()
+  await fetchHeroBanners()
+  await fetchFeaturedCollections()
+  await fetchCategoryTabs()
   startBannerRotation()
 })
 

@@ -29,13 +29,16 @@
 <script>
 import authService from '../services/authService';
 import { globalState } from '../main.js';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
+import { useAuth } from '../composables/useAuth';
 
 export default {
   name: 'Login',
   setup() {
     const router = useRouter();
-    return { router };
+    const route = useRoute();
+    const { setToken } = useAuth();
+    return { router, route, setToken };
   },
   data() {
     return {
@@ -51,14 +54,21 @@ export default {
           password: this.password,
         };
         const response = await authService.login(userData);
-        console.log('Login successful:', response);
+        
+        this.setToken(response.token);
         
         globalState.isLoggedIn = true;
-        globalState.user = response;
+        globalState.user = {
+            _id: response._id,
+            name: response.name,
+            email: response.email,
+            role: response.role,
+        };
         
-        this.router.push('/');
+        const redirect = this.route.query.redirect || '/';
+        this.router.push(redirect);
       } catch (error) {
-        console.error('Login failed:', error.message);
+        
         // Here you could add logic to show an error message to the user
       }
     },

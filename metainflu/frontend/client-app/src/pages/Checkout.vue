@@ -139,7 +139,7 @@ const fetchCart = async () => {
         }
     } catch (err) {
         error.value = 'Failed to load cart: ' + err.message;
-        console.error('Fetch Cart Error:', err);
+        
     } finally {
         isLoading.value = false;
     }
@@ -182,7 +182,7 @@ const placeOrder = async () => {
         
     } catch (err) {
         orderError.value = 'Failed to place order: ' + (err.message || 'Unknown error');
-        console.error('Place Order Error:', err);
+        
     } finally {
         isPlacingOrder.value = false;
     }

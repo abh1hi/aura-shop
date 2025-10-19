@@ -152,7 +152,7 @@ const fetchAccountData = async () => {
         orders.value = await orderService.getMyOrders();
     } catch (err) {
         error.value = err.message || 'Failed to load user data.';
-        console.error('Fetch Account Data Error:', err);
+        
     } finally {
         isLoading.value = false;
     }
@@ -166,7 +166,7 @@ const handleLogout = () => {
 };
 
 const updatePassword = () => {
-    console.log('Attempting to update password:', newPassword.value);
+    
     newPassword.value = '';
     alert('Password update logic placeholder executed.');
 };

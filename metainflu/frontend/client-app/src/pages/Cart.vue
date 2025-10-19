@@ -227,8 +227,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import cartService from '../services/cartService'
+import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
+const { token } = useAuth()
 
 // Reactive data
 const isLoading = ref(true)
@@ -240,29 +243,6 @@ const updatingItem = ref(null)
 const processingCheckout = ref(false)
 const showActions = ref({})
 const showClearModal = ref(false)
-
-// Mock cart data
-const mockCartItems = [
-  {
-    id: '1',
-    name: 'Street Wear Knitted Sweater',
-    price: 199.99,
-    originalPrice: 249.99,
-    quantity: 1,
-    size: 'M',
-    color: 'Navy',
-    image: 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=300&q=80'
-  },
-  {
-    id: '2',
-    name: 'Moon Light X Jacket',
-    price: 250.71,
-    quantity: 2,
-    size: 'L',
-    color: 'Black',
-    image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=300&q=80'
-  }
-]
 
 // Computed properties
 const totalItems = computed(() => {
@@ -293,66 +273,79 @@ const total = computed(() => {
 // Methods
 const loadCart = async () => {
   isLoading.value = true
-  
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    cartItems.value = mockCartItems
+    if (token.value) {
+      const cart = await cartService.getCart(token.value)
+      cartItems.value = cart.items
+        .filter(item => item.product)
+        .map(item => ({
+          id: item._id,
+          name: item.product.name,
+          price: item.product.price || 0,
+          originalPrice: item.product.originalPrice,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color,
+          image: item.product.images[0]?.url || 'https://via.placeholder.com/150x150/f3f4f6/9ca3af?text=No+Image'
+      }))
+    }
   } catch (error) {
-    console.error('Failed to load cart:', error)
+    
   } finally {
     isLoading.value = false
   }
 }
 
-const increaseQuantity = async (itemId) => {
+const updateQuantity = async (itemId, quantity) => {
   updatingItem.value = itemId
-  
   try {
-    await new Promise(resolve => setTimeout(resolve, 300))
-    const item = cartItems.value.find(item => item.id === itemId)
-    if (item) {
-      item.quantity++
+    if (token.value) {
+      await cartService.updateCartItem(itemId, quantity, token.value)
+      const item = cartItems.value.find(item => item.id === itemId)
+      if (item) {
+        item.quantity = quantity
+      }
     }
   } catch (error) {
-    console.error('Failed to update quantity:', error)
+    
   } finally {
     updatingItem.value = null
   }
 }
 
-const decreaseQuantity = async (itemId) => {
-  updatingItem.value = itemId
-  
-  try {
-    await new Promise(resolve => setTimeout(resolve, 300))
-    const item = cartItems.value.find(item => item.id === itemId)
-    if (item && item.quantity > 1) {
-      item.quantity--
-    }
-  } catch (error) {
-    console.error('Failed to update quantity:', error)
-  } finally {
-    updatingItem.value = null
+const increaseQuantity = (itemId) => {
+  const item = cartItems.value.find(item => item.id === itemId)
+  if (item) {
+    updateQuantity(itemId, item.quantity + 1)
+  }
+}
+
+const decreaseQuantity = (itemId) => {
+  const item = cartItems.value.find(item => item.id === itemId)
+  if (item && item.quantity > 1) {
+    updateQuantity(itemId, item.quantity - 1)
   }
 }
 
 const removeItem = async (itemId) => {
   try {
-    cartItems.value = cartItems.value.filter(item => item.id !== itemId)
-    hideItemActions(itemId)
-    
-    // Haptic feedback
-    if (navigator.vibrate) {
-      navigator.vibrate(50)
+    if (token.value) {
+      await cartService.removeFromCart(itemId, token.value)
+      cartItems.value = cartItems.value.filter(item => item.id !== itemId)
+      hideItemActions(itemId)
+
+      // Haptic feedback
+      if (navigator.vibrate) {
+        navigator.vibrate(50)
+      }
     }
   } catch (error) {
-    console.error('Failed to remove item:', error)
+    
   }
 }
 
 const saveForLater = (itemId) => {
-  console.log('Save for later:', itemId)
+  
   // Implementation for saving to wishlist
   hideItemActions(itemId)
 }
@@ -394,7 +387,7 @@ const applyPromoCode = async () => {
       alert('Invalid promo code')
     }
   } catch (error) {
-    console.error('Failed to apply promo code:', error)
+    
     alert('Failed to apply promo code')
   } finally {
     applyingPromo.value = false
@@ -413,13 +406,20 @@ const closeClearModal = () => {
   showClearModal.value = false
 }
 
-const confirmClearCart = () => {
-  cartItems.value = []
-  showClearModal.value = false
-  
-  // Haptic feedback
-  if (navigator.vibrate) {
-    navigator.vibrate([50, 30, 50])
+const confirmClearCart = async () => {
+  try {
+    if (token.value) {
+      await cartService.clearCart(token.value)
+      cartItems.value = []
+      showClearModal.value = false
+
+      // Haptic feedback
+      if (navigator.vibrate) {
+        navigator.vibrate([50, 30, 50])
+      }
+    }
+  } catch (error) {
+    
   }
 }
 
@@ -431,7 +431,7 @@ const proceedToCheckout = async () => {
     await new Promise(resolve => setTimeout(resolve, 1000))
     router.push('/checkout')
   } catch (error) {
-    console.error('Failed to proceed to checkout:', error)
+    
     alert('Failed to proceed to checkout')
   } finally {
     processingCheckout.value = false
@@ -443,7 +443,7 @@ const goBack = () => {
 }
 
 const onSwipe = (event) => {
-  console.log('Swipe detected:', event)
+  
 }
 
 const handleImageError = (event) => {
@@ -452,7 +452,11 @@ const handleImageError = (event) => {
 
 // Lifecycle
 onMounted(() => {
-  loadCart()
+  if (!token.value) {
+    router.push({ path: '/login', query: { redirect: '/cart' } })
+  } else {
+    loadCart()
+  }
 })
 </script>
 

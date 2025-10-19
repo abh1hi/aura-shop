@@ -373,7 +373,7 @@ const fetchInitialData = async () => {
     allProducts.value = productsData
     categories.value = categoriesData
   } catch (err) {
-    console.error('Failed to load shop data:', err)
+    
     error.value = 'Failed to load products. Please try again.'
   } finally {
     isLoading.value = false
@@ -442,15 +442,15 @@ const goToProduct = (product) => {
 }
 
 const onSwipe = (event) => {
-  console.log('Swipe detected:', event)
+  
 }
 
 const onFavoriteToggled = (data) => {
-  console.log('Favorite toggled:', data)
+  
 }
 
 const onAddedToCart = (product) => {
-  console.log('Added to cart:', product)
+  
   // Could show toast notification
 }
 

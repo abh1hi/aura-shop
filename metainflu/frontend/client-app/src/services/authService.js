@@ -5,12 +5,6 @@
 */
 const API_URL = 'http://localhost:5000/api/auth/';
 
-/**
- * Registers a new CLIENT user by sending a POST request to the backend.
- * All users registered through this function will have the default 'user' role.
- * @param {object} userData - The user's registration data (name, email, password).
- * @returns {Promise<object>} - A promise that resolves with the user data upon successful registration.
- */
 const register = async (userData) => {
   try {
     const response = await fetch(API_URL + 'register', {
@@ -29,7 +23,13 @@ const register = async (userData) => {
     const data = await response.json();
     // Save client user data to localStorage
     if (data.token) {
-      localStorage.setItem('user', JSON.stringify(data));
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify({
+        _id: data._id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+      }));
     }
 
     return data;
@@ -39,11 +39,6 @@ const register = async (userData) => {
   }
 };
 
-/**
- * Authenticates a CLIENT user by sending a POST request to the backend.
- * @param {object} userData - The user's login credentials (email, password).
- * @returns {Promise<object>} - A promise that resolves with the user data upon successful login.
- */
 const login = async (userData) => {
   try {
     const response = await fetch(API_URL + 'login', {
@@ -62,7 +57,13 @@ const login = async (userData) => {
     const data = await response.json();
     // Save client user data to localStorage
     if (data.token) {
-      localStorage.setItem('user', JSON.stringify(data));
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify({
+        _id: data._id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+      }));
     }
 
     return data;
@@ -72,11 +73,9 @@ const login = async (userData) => {
   }
 };
 
-/**
- * Logs out the current client user by removing their data from localStorage.
- */
 const logout = () => {
   localStorage.removeItem('user');
+  localStorage.removeItem('token');
 };
 
 export default {

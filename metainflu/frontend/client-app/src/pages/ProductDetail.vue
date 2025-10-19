@@ -78,14 +78,14 @@
         <section class="product-info">
           <div class="product-header">
             <h1 class="product-title">{{ product.name }}</h1>
-            <div class="rating-section" v-if="product.rating">
+            <div class="rating-section" v-if="product.ratings">
               <div class="stars">
                 <i v-for="n in 5" :key="n" :class="[
                   'fas fa-star',
-                  n <= Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300'
+                  n <= Math.floor(product.ratings.average) ? 'text-yellow-400' : 'text-gray-300'
                 ]"></i>
               </div>
-              <span class="rating-text">{{ product.rating }} ({{ product.reviews || 0 }} reviews)</span>
+              <span class="rating-text">{{ product.ratings.average }} ({{ product.ratings.count || 0 }} reviews)</span>
             </div>
           </div>
 
@@ -197,15 +197,15 @@
                   <div class="specs-grid">
                     <div class="spec-item">
                       <span class="spec-label">Material:</span>
-                      <span class="spec-value">{{ product.material || 'Cotton blend' }}</span>
+                      <span class="spec-value">{{ material }}</span>
                     </div>
                     <div class="spec-item">
                       <span class="spec-label">Care:</span>
-                      <span class="spec-value">{{ product.care || 'Machine wash cold' }}</span>
+                      <span class="spec-value">{{ product.careInstructions || 'N/A' }}</span>
                     </div>
                     <div class="spec-item">
                       <span class="spec-label">Origin:</span>
-                      <span class="spec-value">{{ product.origin || 'Made ethically' }}</span>
+                      <span class="spec-value">{{ product.regionOfOrigin || 'N/A' }}</span>
                     </div>
                   </div>
                 </div>
@@ -219,19 +219,19 @@
               </button>
               <transition name="accordion">
                 <div v-show="accordion.shipping" class="accordion-content">
-                  <div class="shipping-info">
+                  <div class="shipping-info" v-if="shippingInfo">
                     <div class="shipping-item">
                       <i class="fas fa-truck"></i>
-                      <div>
-                        <strong>Free Shipping</strong>
-                        <p>On orders over $75</p>
+                      <div v-if="shippingInfo.freeShipping">
+                        <strong>{{ shippingInfo.freeShipping.title }}</strong>
+                        <p>{{ shippingInfo.freeShipping.description }}</p>
                       </div>
                     </div>
                     <div class="shipping-item">
                       <i class="fas fa-undo"></i>
-                      <div>
-                        <strong>Easy Returns</strong>
-                        <p>30-day return policy</p>
+                      <div v-if="shippingInfo.easyReturns">
+                        <strong>{{ shippingInfo.easyReturns.title }}</strong>
+                        <p>{{ shippingInfo.easyReturns.description }}</p>
                       </div>
                     </div>
                   </div>
@@ -296,9 +296,14 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
 import productService from '../services/productService'
+import homeService from '../services/homeService'
+import cartService from '../services/cartService'
+import { useAuth } from '../composables/useAuth'
+import { colorMap } from '../utils/colors'
 
 const route = useRoute()
 const router = useRouter()
+const { token } = useAuth()
 
 // Reactive data
 const product = ref(null)
@@ -312,6 +317,7 @@ const isFavorite = ref(false)
 const addingToCart = ref(false)
 const showImageModal = ref(false)
 const currentImageIndex = ref(0)
+const shippingInfo = ref(null)
 
 const accordion = ref({
   description: true,
@@ -408,6 +414,12 @@ const canAddToCart = computed(() => {
   return selectedVariant.value && selectedVariant.value.stock > 0 && quantity.value <= selectedVariant.value.stock
 })
 
+const material = computed(() => {
+  if (!product.value || !product.value.attributes) return 'N/A'
+  const materialAttribute = product.value.attributes.find(attr => attr.name.toLowerCase() === 'material')
+  return materialAttribute ? materialAttribute.value : 'N/A'
+})
+
 // Methods
 const fetchProductData = async () => {
   isLoading.value = true
@@ -427,10 +439,18 @@ const fetchProductData = async () => {
       initializeDefaultVariant()
     }
   } catch (err) {
-    console.error('Failed to load product data:', err)
+    
     error.value = 'Failed to load product. Please try again.'
   } finally {
     isLoading.value = false
+  }
+}
+
+const fetchShippingInfo = async () => {
+  try {
+    shippingInfo.value = await homeService.getShippingInfo()
+  } catch (error) {
+    
   }
 }
 
@@ -488,28 +508,32 @@ const decreaseQuantity = () => {
 
 const addToCart = async () => {
   if (!canAddToCart.value) return
-  
+
+  if (!token.value) {
+    router.push('/login')
+    return
+  }
+
   addingToCart.value = true
-  
+
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    console.log('Adding to cart:', {
-      product: product.value,
-      variant: selectedVariant.value,
-      quantity: quantity.value
-    })
-    
+    const itemData = {
+      productId: product.value._id,
+      quantity: quantity.value,
+      size: selectedVariants.value.Size,
+      color: selectedVariants.value.Color,
+    }
+    await cartService.addToCart(itemData, token.value)
+
     // Success feedback
     if (navigator.vibrate) {
       navigator.vibrate(50)
     }
-    
+
     // Could show toast notification here
     alert('Added to cart successfully!')
   } catch (error) {
-    console.error('Failed to add to cart:', error)
+    
     alert('Failed to add to cart. Please try again.')
   } finally {
     addingToCart.value = false
@@ -519,11 +543,7 @@ const addToCart = async () => {
 const buyNow = () => {
   if (!canAddToCart.value) return
   
-  console.log('Buy now:', {
-    product: product.value,
-    variant: selectedVariant.value,
-    quantity: quantity.value
-  })
+  
   
   router.push('/checkout')
 }
@@ -567,7 +587,7 @@ const goBack = () => {
 }
 
 const onSwipe = (event) => {
-  console.log('Swipe detected:', event)
+  
 }
 
 const handleImageError = (event) => {
@@ -579,14 +599,6 @@ const formatVariantName = (name) => {
 }
 
 const getColorValue = (colorName) => {
-  const colorMap = {
-    'Black': '#000000',
-    'White': '#ffffff',
-    'Navy': '#000080',
-    'Gray': '#808080',
-    'Brown': '#8b4513',
-    'Beige': '#f5f5dc'
-  }
   return colorMap[colorName] || colorName.toLowerCase()
 }
 
@@ -613,6 +625,7 @@ watch(() => route.params.id, () => {
 // Lifecycle
 onMounted(() => {
   fetchProductData()
+  fetchShippingInfo()
 })
 </script>
 

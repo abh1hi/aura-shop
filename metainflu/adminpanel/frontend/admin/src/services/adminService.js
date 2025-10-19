@@ -160,6 +160,143 @@ const rejectCategory = async (id) => {
     }
 };
 
+
+const API_URL_HOME = 'http://localhost:5000/api/home';
+
+const getHeroBanners = async () => {
+    try {
+        const response = await fetch(`${API_URL_HOME}/hero-banners`);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to fetch hero banners');
+        }
+        return response.json();
+    } catch (error) {
+        console.error('Failed to fetch hero banners:', error);
+        throw error;
+    }
+};
+
+const createHeroBanner = async (bannerData) => {
+    try {
+        const response = await fetch(`${API_URL_HOME}/hero-banners`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(bannerData),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to create hero banner');
+        }
+        return response.json();
+    } catch (error) {
+        console.error('Failed to create hero banner:', error);
+        throw error;
+    }
+};
+
+const updateHeroBanner = async (id, bannerData) => {
+    try {
+        const response = await fetch(`${API_URL_HOME}/hero-banners/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(bannerData),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update hero banner');
+        }
+        return response.json();
+    } catch (error) {
+        console.error('Failed to update hero banner:', error);
+        throw error;
+    }
+};
+
+const deleteHeroBanner = async (id) => {
+    try {
+        const response = await fetch(`${API_URL_HOME}/hero-banners/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete hero banner');
+        }
+        return response.json();
+    } catch (error) {
+        console.error('Failed to delete hero banner:', error);
+        throw error;
+    }
+};
+
+const getFeaturedCollections = async () => {
+    try {
+        const response = await fetch(`${API_URL_HOME}/featured-collections`);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to fetch featured collections');
+        }
+        return response.json();
+    } catch (error) {
+        console.error('Failed to fetch featured collections:', error);
+        throw error;
+    }
+};
+
+const createFeaturedCollection = async (collectionData) => {
+    try {
+        const response = await fetch(`${API_URL_HOME}/featured-collections`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(collectionData),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to create featured collection');
+        }
+        return response.json();
+    } catch (error) {
+        console.error('Failed to create featured collection:', error);
+        throw error;
+    }
+};
+
+const updateFeaturedCollection = async (id, collectionData) => {
+    try {
+        const response = await fetch(`${API_URL_HOME}/featured-collections/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(collectionData),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update featured collection');
+        }
+        return response.json();
+    } catch (error) {
+        console.error('Failed to update featured collection:', error);
+        throw error;
+    }
+};
+
+const deleteFeaturedCollection = async (id) => {
+    try {
+        const response = await fetch(`${API_URL_HOME}/featured-collections/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete featured collection');
+        }
+        return response.json();
+    } catch (error) {
+        console.error('Failed to delete featured collection:', error);
+        throw error;
+    }
+};
+
 export default {
   getUsers,
   getProducts,
@@ -167,4 +304,12 @@ export default {
   getPendingCategories,
   approveCategory,
   rejectCategory,
+  getHeroBanners,
+  createHeroBanner,
+  updateHeroBanner,
+  deleteHeroBanner,
+  getFeaturedCollections,
+  createFeaturedCollection,
+  updateFeaturedCollection,
+  deleteFeaturedCollection,
 };

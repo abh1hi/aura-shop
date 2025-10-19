@@ -156,9 +156,9 @@ const addToCart = async () => {
       navigator.vibrate(50) // Haptic feedback on mobile
     }
     
-    console.log('Product added to cart successfully')
+    
   } catch (error) {
-    console.error('Failed to add product to cart:', error)
+    
     // Could emit error event or show toast notification
   } finally {
     isAdding.value = false
@@ -184,12 +184,12 @@ const viewDetails = () => {
 
 const handleTap = () => {
   // Handle single tap - could add analytics or other logic
-  console.log('Product tapped:', props.product.name)
+  
 }
 
 const handlePress = () => {
   // Handle long press - could show quick preview
-  console.log('Product long pressed:', props.product.name)
+  
   
   // Haptic feedback for long press
   if (navigator.vibrate) {

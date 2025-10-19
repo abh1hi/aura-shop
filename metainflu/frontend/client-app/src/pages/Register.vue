@@ -54,13 +54,13 @@ export default {
         };
 
         await authService.register(userData);
-        console.log('Registration successful');
+        
         
         // Redirect to login page after successful registration
         this.router.push('/login');
         
       } catch (error) {
-        console.error('Registration failed:', error.message);
+        
         // Here you could add logic to show an error message to the user
       }
     },

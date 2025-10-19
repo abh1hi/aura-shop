@@ -30,7 +30,7 @@ export default {
   methods: {
     handleForgotPassword() {
       // Handle forgot password logic here
-      console.log('Forgot password for:', this.email);
+      
     },
   },
 };

@@ -16,6 +16,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const vendorRoutes = require('./routes/vendorRoutes'); // Import vendor routes
+const homeRoutes = require('./routes/homeRoutes'); // Import home routes
 
 const { errorHandler } = require('./middleware/errorMiddleware');
 const { protect } = require('./middleware/authMiddleware');
@@ -62,6 +63,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes); 
 app.use('/api/vendor', vendorRoutes); // Use new vendor routes
+app.use('/api/home', homeRoutes);
 
 // Test protected route
 app.get('/api/protected', protect, (req, res) => {
@@ -80,3 +82,4 @@ app.use(errorHandler);
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
+
