@@ -7,7 +7,7 @@
           <i class="fas fa-bars"></i>
         </div>
         <div class="logo">
-          <h1>OBEYLY</h1>
+          <h1>AURA</h1>
         </div>
         <div class="header-actions">
           <i class="fas fa-search" @click="toggleSearch"></i>
@@ -165,7 +165,6 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
 import productService from '../services/productService'
-import { useTouch } from '@vueuse/core'
 
 const router = useRouter()
 
@@ -793,4 +792,6 @@ onUnmounted(() => {
   .trending-grid {
     grid-template-columns: repeat(4, 1fr);
   }
-}</style>
+}
+/* styles unchanged for brevity */
+</style>
