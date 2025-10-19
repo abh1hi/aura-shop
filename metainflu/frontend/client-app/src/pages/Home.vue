@@ -165,7 +165,6 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
 import productService from '../services/productService'
-import { useTouch } from '@vueuse/core'
 
 const router = useRouter()
 
@@ -793,4 +792,5 @@ onUnmounted(() => {
   .trending-grid {
     grid-template-columns: repeat(4, 1fr);
   }
-}</style>
+}
+</style>
