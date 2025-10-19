@@ -11,6 +11,8 @@ import AdminCampaigns from '../pages/AdminCampaigns.vue';
 import AdminPayments from '../pages/AdminPayments.vue';
 import AdminLogin from '../pages/AdminLogin.vue';
 import AdminCategories from '../pages/AdminCategories.vue';
+import AdminHeroBanners from '../pages/AdminHeroBanners.vue';
+import AdminFeaturedCollections from '../pages/AdminFeaturedCollections.vue';
 
 const routes = [
   {
@@ -47,6 +49,16 @@ const routes = [
     path: '/payments',
     name: 'AdminPayments',
     component: AdminPayments,
+  },
+  {
+    path: '/hero-banners',
+    name: 'AdminHeroBanners',
+    component: AdminHeroBanners,
+  },
+  {
+    path: '/featured-collections',
+    name: 'AdminFeaturedCollections',
+    component: AdminFeaturedCollections,
   },
 ];
 
