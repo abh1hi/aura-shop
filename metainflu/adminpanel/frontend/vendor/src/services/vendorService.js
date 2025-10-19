@@ -6,7 +6,7 @@
 */
 
 // Set the base URL for the backend API
-const API_BASE_URL = 'http://localhost:5000/api/';
+const API_BASE_URL = 'https://3czzqk3l-5000.use2.devtunnels.ms/api/';
 
 /**
  * Helper function to retrieve the vendor's token from local storage.

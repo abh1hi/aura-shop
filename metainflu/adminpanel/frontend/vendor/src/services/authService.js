@@ -3,7 +3,7 @@
   Purpose: This service is exclusively for the CLIENT-FACING storefront.
   I have updated the API_URL to point to your local backend server.
 */
-const API_URL = 'http://localhost:5000/api/auth/';
+const API_URL = 'https://3czzqk3l-5000.use2.devtunnels.ms/api/auth/';
 
 /**
  * Registers a new CLIENT user by sending a POST request to the backend.

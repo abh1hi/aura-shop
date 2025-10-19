@@ -4,23 +4,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Core Palette (inspired by iOS/Dribbble shot)
-        'primary-blue': '#007AFF', // Main actionable blue
-        'secondary-blue': '#E9F5FF', // Lighter blue for backgrounds/highlights
-        'gray-bg': '#F8F9FA', // Lightest background
-        'gray-surface': '#FFFFFF', // Card/surface background
-        'gray-text': '#6C757D', // Secondary text
-        'gray-dark-text': '#212529', // Primary text
-        'gray-border': '#E0E0E0', // Light borders
-        'success-green': '#28A745', // For "Completed" tasks
-        'info-purple': '#6F42C1', // For "In Progress" or other info
-        'warning-orange': '#FD7E14', // For "Pending" status
-        'danger-red': '#DC3545', // For alerts/errors
-        'chart-blue': '#7B61FF', // For the line chart (Budget vs Actual)
-        'chart-green': '#A7ED86', // Another chart color
-        'chart-light-blue': '#84E0FF', // Bar chart color
-        'chart-light-purple': '#D9D0FF', // Bar chart color
-        'chart-light-green': '#DCFCE7', // Card highlight color
+        primary: 'var(--primary)',
+        'primary-light': 'var(--primary-light)',
+        secondary: 'var(--secondary)',
+        background: 'var(--background)',
+        surface: 'var(--surface)',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        border: 'var(--border)',
+        danger: 'var(--danger)',
       },
       fontFamily: {
         // Use Inter as a default clean sans-serif font

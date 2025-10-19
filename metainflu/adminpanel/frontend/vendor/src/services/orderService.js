@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api/orders/';
+const API_URL = 'https://3czzqk3l-5000.use2.devtunnels.ms/api/orders/';
 
 /**
  * Helper function to retrieve the user's token from local storage.

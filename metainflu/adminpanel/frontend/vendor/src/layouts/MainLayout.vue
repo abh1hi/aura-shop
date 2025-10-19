@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex bg-gray-100">
+  <div class="min-h-screen flex bg-gray-100" v-touch:swipe.right="openSidebar" v-touch:swipe.left="closeSidebar">
     <!-- Desktop Sidebar -->
     <VendorSidebar class="hidden lg:flex" />
 
@@ -28,4 +28,12 @@ import VendorSidebar from '../components/VendorSidebar.vue';
 import VendorBottomNav from '../components/VendorBottomNav.vue';
 
 const isMobileNavOpen = ref(false);
+
+const openSidebar = () => {
+  isMobileNavOpen.value = true;
+};
+
+const closeSidebar = () => {
+  isMobileNavOpen.value = false;
+};
 </script>

@@ -3,7 +3,7 @@
   Purpose: Handles fetching public category data.
 */
 
-const API_URL = 'http://localhost:5000/api/categories/';
+const API_URL = 'https://3czzqk3l-5000.use2.devtunnels.ms/api/categories/';
 
 /**
  * Fetches all approved categories from the backend.

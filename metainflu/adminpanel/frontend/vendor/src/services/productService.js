@@ -3,7 +3,7 @@
   Purpose: Handles fetching product data for the client-facing shop, now supporting category filtering.
 */
 
-const API_URL = 'http://localhost:5000/api/products/';
+const API_URL = 'https://3czzqk3l-5000.use2.devtunnels.ms/api/products/';
 
 /**
  * Fetches all products from the backend.
