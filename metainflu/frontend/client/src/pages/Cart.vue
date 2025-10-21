@@ -117,36 +117,43 @@ const fetchCart = async () => {
 
 const removeItem = async (productId) => {
     if (!confirm('Are you sure you want to remove this item?')) return;
-    
+
+    const itemIndex = cartItems.value.findIndex(item => item.product._id === productId);
+    if (itemIndex === -1) return;
+
+    const removedItem = cartItems.value[itemIndex];
+    cartItems.value.splice(itemIndex, 1);
+
     try {
         await cartService.removeItem(productId);
-        // Optimistically update the UI by refetching the cart
-        await fetchCart();
     } catch (err) {
+        // If the API call fails, revert the change and show an error
+        cartItems.value.splice(itemIndex, 0, removedItem);
         error.value = 'Failed to remove item: ' + err.message;
         console.error('Remove Item Error:', err);
     }
 };
 
 const updateItemQuantity = (productId, quantity) => {
-    // NOTE: For a real app, this would trigger an API call to update the cart
-    // For now, we only update the local quantity for display purposes.
+    const newQuantity = parseFloat(quantity);
+    if (isNaN(newQuantity) || newQuantity < 1) {
+        return; // Or set to a default of 1, depending on desired behavior
+    }
+
     const itemIndex = cartItems.value.findIndex(item => item.product._id === productId);
     if (itemIndex > -1) {
-        cartItems.value[itemIndex].quantity = parseInt(quantity);
+        cartItems.value[itemIndex].quantity = newQuantity;
     }
-    // A full implementation would involve calling cartService.updateItem(productId, newQuantity)
+    // A full implementation would also debounce this and call cartService.updateItem(productId, newQuantity)
 };
 
 const cartTotal = computed(() => {
     const subtotal = cartItems.value.reduce((acc, item) => {
-        // Ensure price and quantity are valid numbers before calculating
-        const price = item.product.price || 0;
-        const quantity = item.quantity || 0;
+        const price = parseFloat(item.product.price) || 0;
+        const quantity = parseFloat(item.quantity) || 0;
         return acc + (price * quantity);
     }, 0);
     
-    // Simple logic for shipping cost
     const shipping = subtotal > 100 ? 0 : 10.00;
     const total = subtotal + shipping;
     

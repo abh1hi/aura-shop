@@ -66,15 +66,15 @@ const addItem = async (itemData) => {
 
 /**
  * Removes a specific item from the user's cart.
- * @param {string} productId - The ID of the product to remove.
+ * @param {string} itemId - The ID of the item to remove.
  * @returns {Promise<object>} Success message or updated cart structure.
  */
-const removeItem = async (productId) => {
+const removeItem = async (itemId) => {
     const token = getToken();
     if (!token) throw new Error('User not authenticated to remove item.');
     
     try {
-        const response = await fetch(API_URL + productId, {
+        const response = await fetch(API_URL + itemId, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,

@@ -69,8 +69,10 @@
                     <h2>Order Summary</h2>
                     <div class="item-list">
                         <div v-for="item in cartItems" :key="item.product._id" class="item-summary-row">
+                            <img :src="item.product.images[0] || 'https://via.placeholder.com/50'" alt="Product Image" class="w-12 h-12 object-cover rounded-md">
                             <span>{{ item.product.name }} (x{{ item.quantity }})</span>
                             <span>${{ (item.product.price * item.quantity).toFixed(2) }}</span>
+                            <button @click="removeItem(item._id)" class="text-red-500 hover:text-red-700">Remove</button>
                         </div>
                     </div>
                     <div class="summary-row">
@@ -193,6 +195,16 @@ const placeOrder = async () => {
         console.error('Place Order Error:', err);
     } finally {
         isPlacingOrder.value = false;
+    }
+};
+
+const removeItem = async (itemId) => {
+    try {
+        await cartService.removeItem(itemId);
+        fetchCart();
+    } catch (err) {
+        error.value = 'Failed to remove item: ' + err.message;
+        console.error('Remove Item Error:', err);
     }
 };
 
