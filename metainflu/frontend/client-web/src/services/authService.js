@@ -3,7 +3,7 @@
   Purpose: This service is exclusively for the CLIENT-FACING storefront.
   I have updated the API_URL to point to your local backend server.
 */
-const API_URL = 'http://localhost:5000/api/auth/';
+const API_URL = 'https://improved-goggles-v6pqpqrvvj46cwqr7-5000.app.github.dev/api/auth/';
 
 const register = async (userData) => {
   try {

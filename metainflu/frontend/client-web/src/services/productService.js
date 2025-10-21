@@ -3,7 +3,7 @@
   Purpose: Handles fetching product data for the client-facing shop, now supporting category filtering.
 */
 
-const API_URL = 'http://localhost:5000/api/products/';
+const API_URL = 'https://improved-goggles-v6pqpqrvvj46cwqr7-5000.app.github.dev/api/products/';
 
 /**
  * Fetches all products from the backend.
