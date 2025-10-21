@@ -23,31 +23,22 @@ export function useDeviceDetection() {
   
   // Device type detection based on screen size and user agent
   const isMobileDevice = computed(() => {
-    // Primary check: screen width
     if (screenWidth.value <= 767) return true
-    
-    // Secondary check: user agent for mobile devices
     const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
     return mobileRegex.test(userAgent.value)
   })
   
   const isTabletDevice = computed(() => {
-    // Tablet range: 768px to 1023px
     if (screenWidth.value >= 768 && screenWidth.value <= 1023) {
       return true
     }
-    
-    // iPad specific detection
     const iPadRegex = /iPad/i
     if (iPadRegex.test(userAgent.value)) return true
-    
-    // Android tablet detection (no "Mobile" in user agent)
     const androidRegex = /Android/i
     const mobileRegex = /Mobile/i
     if (androidRegex.test(userAgent.value) && !mobileRegex.test(userAgent.value)) {
       return true
     }
-    
     return false
   })
   
@@ -65,23 +56,14 @@ export function useDeviceDetection() {
   
   // Device capabilities
   const hasNotch = computed(() => {
-    // Check for safe area insets (indicates notched device)
     const safeAreaTop = getComputedStyle(document.documentElement)
       .getPropertyValue('--safe-area-inset-top')
     return safeAreaTop && safeAreaTop !== '0px'
   })
   
-  const isHighDensityScreen = computed(() => {
-    return pixelRatio.value >= 2
-  })
-  
-  const isLandscape = computed(() => {
-    return orientation.value === 'landscape'
-  })
-  
-  const isPortrait = computed(() => {
-    return orientation.value === 'portrait'
-  })
+  const isHighDensityScreen = computed(() => pixelRatio.value >= 2)
+  const isLandscape = computed(() => orientation.value === 'landscape')
+  const isPortrait = computed(() => orientation.value === 'portrait')
   
   // Device classification for styling
   const deviceType = computed(() => {
@@ -91,56 +73,44 @@ export function useDeviceDetection() {
     return 'unknown'
   })
   
+  // IMPORTANT: return an ARRAY of classes, not a space-delimited string
   const deviceClass = computed(() => {
     const classes = []
-    
     classes.push(`device-${deviceType.value}`)
     classes.push(`orientation-${orientation.value}`)
-    
     if (hasTouchSupport.value) classes.push('touch-capable')
     if (hasNotch.value) classes.push('has-notch')
     if (isHighDensityScreen.value) classes.push('high-density')
-    
-    return classes.join(' ')
+    return classes
   })
   
   // Operating system detection
   const operatingSystem = computed(() => {
     const ua = userAgent.value
-    
     if (/iPhone|iPad|iPod/i.test(ua)) return 'ios'
     if (/Android/i.test(ua)) return 'android'
     if (/Windows/i.test(ua)) return 'windows'
     if (/Mac/i.test(ua)) return 'macos'
     if (/Linux/i.test(ua)) return 'linux'
-    
     return 'unknown'
   })
   
-  // Browser detection
   const browser = computed(() => {
     const ua = userAgent.value
-    
     if (/Chrome/i.test(ua) && !/Edge/i.test(ua)) return 'chrome'
     if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) return 'safari'
     if (/Firefox/i.test(ua)) return 'firefox'
     if (/Edge/i.test(ua)) return 'edge'
     if (/Opera/i.test(ua)) return 'opera'
-    
     return 'unknown'
   })
   
-  // Performance indicators
   const isLowEndDevice = computed(() => {
-    // Heuristic for low-end device detection
     const hardwareConcurrency = navigator.hardwareConcurrency || 1
     const memory = navigator.deviceMemory || 1
-    
-    // Consider low-end if < 2 CPU cores or < 2GB RAM
     return hardwareConcurrency < 2 || memory < 2
   })
   
-  // Network information (if available)
   const networkInfo = computed(() => {
     if ('connection' in navigator) {
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
@@ -161,62 +131,26 @@ export function useDeviceDetection() {
            networkInfo.value.saveData
   })
   
-  // Accessibility features
-  const prefersReducedMotion = computed(() => {
-    if (typeof window === 'undefined') return false
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  })
+  const prefersReducedMotion = computed(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const prefersHighContrast = computed(() => window.matchMedia('(prefers-contrast: high)').matches)
+  const prefersDarkMode = computed(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
   
-  const prefersHighContrast = computed(() => {
-    if (typeof window === 'undefined') return false
-    return window.matchMedia('(prefers-contrast: high)').matches
-  })
-  
-  const prefersDarkMode = computed(() => {
-    if (typeof window === 'undefined') return false
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-  })
-  
-  // Utility functions
   const isMobile = () => isMobileDevice.value
   const isTablet = () => isTabletDevice.value
   const isDesktop = () => isDesktopDevice.value
   
-  const supportsHover = computed(() => {
-    return window.matchMedia('(hover: hover)').matches
-  })
+  const supportsHover = computed(() => window.matchMedia('(hover: hover)').matches)
+  const supportsFinePointer = computed(() => window.matchMedia('(pointer: fine)').matches)
   
-  const supportsFinePointer = computed(() => {
-    return window.matchMedia('(pointer: fine)').matches
-  })
+  const handleResize = () => updateScreenSize()
+  const handleOrientationChange = () => setTimeout(updateScreenSize, 100)
   
-  // Event handlers
-  const handleResize = () => {
-    updateScreenSize()
-  }
-  
-  const handleOrientationChange = () => {
-    // Small delay to ensure dimensions are updated
-    setTimeout(updateScreenSize, 100)
-  }
-  
-  // Lifecycle
   onMounted(() => {
-    // Initialize values
     userAgent.value = navigator.userAgent
     touchSupport.value = 'ontouchstart' in window
     updateScreenSize()
-    
-    // Event listeners
     window.addEventListener('resize', handleResize)
     window.addEventListener('orientationchange', handleOrientationChange)
-    
-    // Listen for media query changes
-    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const highContrastQuery = window.matchMedia('(prefers-contrast: high)')
-    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    
-    // Note: These will be reactive through the computed properties
   })
   
   onUnmounted(() => {
@@ -225,46 +159,31 @@ export function useDeviceDetection() {
   })
   
   return {
-    // Device type
     isMobileDevice,
     isTabletDevice,
     isDesktopDevice,
     deviceType,
     deviceClass,
-    
-    // Capabilities
     hasTouchSupport,
     hasNotch,
     isHighDensityScreen,
     supportsHover,
     supportsFinePointer,
-    
-    // Orientation
     orientation,
     isLandscape,
     isPortrait,
-    
-    // Screen info
     screenWidth,
     screenHeight,
     pixelRatio,
-    
-    // System info
     operatingSystem,
     browser,
     userAgent,
-    
-    // Performance
     isLowEndDevice,
     networkInfo,
     isSlowNetwork,
-    
-    // Accessibility
     prefersReducedMotion,
     prefersHighContrast,
     prefersDarkMode,
-    
-    // Utility functions
     isMobile,
     isTablet,
     isDesktop
