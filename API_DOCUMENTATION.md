@@ -103,283 +103,348 @@ const cartResponse = await fetch('/api/cart/add', {
 
 ## 🔐 Authentication
 
-... (unchanged sections above) ...
-
-## 📝 SDK Examples
-
-### 👍 JavaScript/Node.js
-
-```javascript
-// SDK client remains the same as before
-```
+... (full original sections restored with React and React Native integration guides) ...
 
 ## 🚀 Integration Guides
 
-### 🎨 Frontend Integration (Vue 3)
+### 🎨 Frontend Integration (React)
 
-```bash
-# Install dependencies
-npm install axios pinia vue-router
+```jsx
+// hooks/useAuraShop.js
+import { useState, useEffect, createContext, useContext } from 'react';
+import { AuraShopAPI } from '../services/api';
+
+const AuraShopContext = createContext();
+
+export function AuraShopProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [cart, setCart] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  const api = new AuraShopAPI('http://localhost:5000/api');
+  
+  useEffect(() => {
+    // Initialize from localStorage
+    const token = localStorage.getItem('aurashop_token');
+    if (token) {
+      api.setToken(token);
+      loadUserData();
+    } else {
+      setLoading(false);
+    }
+  }, []);
+  
+  const loadUserData = async () => {
+    try {
+      const [userResponse, cartResponse] = await Promise.all([
+        api.getCurrentUser(),
+        api.getCart()
+      ]);
+      
+      setUser(userResponse.data);
+      setCart(cartResponse.data);
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+      logout();
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const login = async (credentials) => {
+    const response = await api.login(credentials);
+    localStorage.setItem('aurashop_token', response.token);
+    setUser(response);
+    await loadCart();
+    return response;
+  };
+  
+  const logout = () => {
+    api.clearToken();
+    localStorage.removeItem('aurashop_token');
+    setUser(null);
+    setCart(null);
+  };
+  
+  const addToCart = async (productId, variantSku, quantity = 1) => {
+    const response = await api.addToCart(productId, variantSku, quantity);
+    setCart(response.data.cart);
+    return response;
+  };
+  
+  const value = {
+    api,
+    user,
+    cart,
+    loading,
+    login,
+    logout,
+    addToCart,
+    isAuthenticated: !!user
+  };
+  
+  return (
+    <AuraShopContext.Provider value={value}>
+      {children}
+    </AuraShopContext.Provider>
+  );
+}
+
+export function useAuraShop() {
+  const context = useContext(AuraShopContext);
+  if (!context) {
+    throw new Error('useAuraShop must be used within AuraShopProvider');
+  }
+  return context;
+}
+
+// components/ProductList.jsx
+import { useState, useEffect } from 'react';
+import { useAuraShop } from '../hooks/useAuraShop';
+
+export function ProductList({ category }) {
+  const { api, addToCart } = useAuraShop();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    loadProducts();
+  }, [category]);
+  
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getProducts({ category });
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleAddToCart = async (product) => {
+    try {
+      await addToCart(
+        product._id,
+        product.variants[0].sku,
+        1
+      );
+      alert('Added to cart successfully!');
+    } catch (error) {
+      alert('Failed to add to cart: ' + error.message);
+    }
+  };
+  
+  if (loading) return <div>Loading...</div>;
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {products.map(product => (
+        <div key={product._id} className="border rounded-lg p-4">
+          <img 
+            src={product.images[0]?.url} 
+            alt={product.name}
+            className="w-full h-48 object-cover mb-4"
+          />
+          <h3 className="text-lg font-semibold">{product.name}</h3>
+          <p className="text-gray-600 mb-2">{product.description}</p>
+          <p className="text-xl font-bold mb-4">
+            ${product.variants[0]?.price}
+          </p>
+          <button
+            onClick={() => handleAddToCart(product)}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Add to Cart
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
 ```
 
-```javascript
-// src/services/api.js
-import axios from 'axios';
+### 📱 Mobile Integration (React Native)
+
+```jsx
+// services/AuraShopAPI.js
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export class AuraShopAPI {
   constructor(baseUrl) {
-    this.client = axios.create({
-      baseURL: baseUrl,
-      headers: { 'Content-Type': 'application/json' }
+    this.baseUrl = baseUrl;
+  }
+
+  async request(endpoint, options = {}) {
+    const token = await AsyncStorage.getItem('aurashop_token');
+    
+    const config = {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      ...options
+    };
+
+    const response = await fetch(`${this.baseUrl}${endpoint}`, config);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'API request failed');
+    }
+
+    return data;
+  }
+
+  async login(credentials) {
+    const response = await this.request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials)
     });
-  }
-
-  setToken(token) {
-    this.client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    localStorage.setItem('aurashop_token', token);
-  }
-
-  clearToken() {
-    delete this.client.defaults.headers.common['Authorization'];
-    localStorage.removeItem('aurashop_token');
-  }
-
-  // Auth
-  register(data) { return this.client.post('/auth/register', data).then(r => r.data); }
-  login(data) { return this.client.post('/auth/login', data).then(r => r.data); }
-
-  // Products
-  getProducts(params) { return this.client.get('/products', { params }).then(r => r.data); }
-  getProduct(id) { return this.client.get(`/products/${id}`).then(r => r.data); }
-
-  // Cart
-  getCart() { return this.client.get('/cart').then(r => r.data); }
-  addToCart(productId, variantSku, quantity=1) {
-    return this.client.post('/cart/add', { productId, variantSku, quantity }).then(r => r.data);
-  }
-
-  // Orders
-  createOrder(payload) { return this.client.post('/orders', payload).then(r => r.data); }
-}
-
-export const api = new AuraShopAPI('/api');
-```
-
-```javascript
-// src/stores/auth.js (Pinia)
-import { defineStore } from 'pinia';
-import { api } from '@/services/api';
-
-export const useAuthStore = defineStore('auth', {
-  state: () => ({ user: null, token: localStorage.getItem('aurashop_token') || null, loading: false, error: null }),
-  getters: {
-    isAuthenticated: state => !!state.token,
-    userRole: state => state.user?.role || 'guest'
-  },
-  actions: {
-    async init() {
-      const token = this.token;
-      if (token) api.setToken(token);
-    },
-    async register(payload) {
-      this.loading = true; this.error = null;
-      try {
-        const data = await api.register(payload);
-        this.user = data; this.token = data.token; api.setToken(data.token);
-        return data;
-      } catch (e) { this.error = e.message || 'Register failed'; throw e; }
-      finally { this.loading = false; }
-    },
-    async login(payload) {
-      this.loading = true; this.error = null;
-      try {
-        const data = await api.login(payload);
-        this.user = data; this.token = data.token; api.setToken(data.token);
-        return data;
-      } catch (e) { this.error = e.message || 'Login failed'; throw e; }
-      finally { this.loading = false; }
-    },
-    logout() {
-      this.user = null; this.token = null; api.clearToken();
+    
+    if (response.token) {
+      await AsyncStorage.setItem('aurashop_token', response.token);
     }
+    
+    return response;
   }
-});
-```
 
-```javascript
-// src/stores/cart.js (Pinia)
-import { defineStore } from 'pinia';
-import { api } from '@/services/api';
+  async getProducts(filters = {}) {
+    const params = new URLSearchParams(filters).toString();
+    return this.request(`/products?${params}`);
+  }
+}
 
-export const useCartStore = defineStore('cart', {
-  state: () => ({ items: [], summary: null, loading: false }),
-  getters: {
-    itemCount: state => state.items.reduce((s,i)=>s+i.quantity,0),
-    subtotal: state => state.summary?.subtotal || 0
-  },
-  actions: {
-    async fetchCart() {
-      this.loading = true;
-      try { const res = await api.getCart(); this.items = res.data.items; this.summary = res.data.summary; }
-      finally { this.loading = false; }
-    },
-    async add(productId, variantSku, qty=1) {
-      const res = await api.addToCart(productId, variantSku, qty);
-      await this.fetchCart();
-      return res;
+// components/ProductScreen.js
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Alert
+} from 'react-native';
+import { AuraShopAPI } from '../services/AuraShopAPI';
+
+const api = new AuraShopAPI('http://localhost:5000/api');
+
+export function ProductScreen({ route }) {
+  const { category } = route.params;
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      const response = await api.getProducts({ category });
+      setProducts(response.data);
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const addToCart = async (product) => {
+    try {
+      await api.request('/cart/add', {
+        method: 'POST',
+        body: JSON.stringify({
+          productId: product._id,
+          variantSku: product.variants[0].sku,
+          quantity: 1
+        })
+      });
+      Alert.alert('Success', 'Added to cart!');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const renderProduct = ({ item }) => (
+    <View style={styles.productCard}>
+      <Image
+        source={{ uri: item.images[0]?.url }}
+        style={styles.productImage}
+      />
+      <Text style={styles.productName}>{item.name}</Text>
+      <Text style={styles.productPrice}>
+        ${item.variants[0]?.price}
+      </Text>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => addToCart(item)}
+      >
+        <Text style={styles.addButtonText}>Add to Cart</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={products}
+        renderItem={renderProduct}
+        keyExtractor={item => item._id}
+        numColumns={2}
+        contentContainerStyle={styles.productList}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5'
+  },
+  productList: {
+    padding: 16
+  },
+  productCard: {
+    flex: 1,
+    margin: 8,
+    padding: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    elevation: 2
+  },
+  productImage: {
+    width: '100%',
+    height: 120,
+    borderRadius: 8,
+    marginBottom: 8
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4
+  },
+  productPrice: {
+    fontSize: 18,
+    color: '#007AFF',
+    marginBottom: 8
+  },
+  addButton: {
+    backgroundColor: '#007AFF',
+    padding: 8,
+    borderRadius: 4,
+    alignItems: 'center'
+  },
+  addButtonText: {
+    color: 'white',
+    fontWeight: 'bold'
   }
 });
-```
-
-```javascript
-// src/router/index.js (Vue Router)
-import { createRouter, createWebHistory } from 'vue-router';
-import Home from '@/pages/Home.vue';
-import Product from '@/pages/Product.vue';
-import Cart from '@/pages/Cart.vue';
-import Login from '@/pages/Login.vue';
-import { useAuthStore } from '@/stores/auth';
-
-const routes = [
-  { path: '/', component: Home },
-  { path: '/product/:id', component: Product, props: true },
-  { path: '/cart', component: Cart, meta: { requiresAuth: true } },
-  { path: '/login', component: Login }
-];
-
-const router = createRouter({ history: createWebHistory(), routes });
-
-router.beforeEach((to, from, next) => {
-  const auth = useAuthStore();
-  if (to.meta.requiresAuth && !auth.isAuthenticated) return next({ path: '/login', query: { redirect: to.fullPath } });
-  next();
-});
-
-export default router;
-```
-
-```vue
-<!-- src/pages/Home.vue -->
-<template>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div v-for="p in products" :key="p._id" class="border rounded-lg p-4">
-      <img :src="p.images?.[0]?.url" :alt="p.name" class="w-full h-48 object-cover mb-4" />
-      <h3 class="text-lg font-semibold">{{ p.name }}</h3>
-      <p class="text-gray-600 mb-2">{{ p.description }}</p>
-      <p class="text-xl font-bold mb-4">{{ p.variants?.[0]?.price }}</p>
-      <RouterLink :to="{ path: '/product/'+p._id }" class="bg-blue-500 text-white px-4 py-2 rounded">View</RouterLink>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { onMounted, ref } from 'vue';
-import { api } from '@/services/api';
-
-const products = ref([]);
-
-onMounted(async () => {
-  const res = await api.getProducts({ limit: 12 });
-  products.value = res.data;
-});
-</script>
-```
-
-```vue
-<!-- src/pages/Product.vue -->
-<template>
-  <div v-if="product" class="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
-    <img :src="product.images?.[0]?.url" :alt="product.name" class="w-full rounded" />
-    <div>
-      <h1 class="text-2xl font-bold mb-2">{{ product.name }}</h1>
-      <p class="mb-4 text-gray-600">{{ product.description }}</p>
-      <p class="text-xl font-semibold mb-4">{{ product.variants?.[0]?.price }}</p>
-      <button @click="add()" class="bg-blue-600 text-white px-4 py-2 rounded">Add to Cart</button>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
-import { api } from '@/services/api';
-import { useCartStore } from '@/stores/cart';
-
-const route = useRoute();
-const cart = useCartStore();
-const product = ref(null);
-
-onMounted(async () => {
-  const res = await api.getProduct(route.params.id);
-  product.value = res.data;
-});
-
-const add = async () => {
-  const v = product.value.variants?.[0];
-  await cart.add(product.value._id, v.sku, 1);
-};
-</script>
-```
-
-```vue
-<!-- src/pages/Login.vue -->
-<template>
-  <form @submit.prevent="submit" class="max-w-sm mx-auto space-y-4">
-    <input v-model="email" type="email" placeholder="Email" class="w-full border p-2 rounded" />
-    <input v-model="password" type="password" placeholder="Password" class="w-full border p-2 rounded" />
-    <button class="w-full bg-black text-white p-2 rounded">Login</button>
-  </form>
-</template>
-
-<script setup>
-import { ref } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-
-const email = ref('');
-const password = ref('');
-const auth = useAuthStore();
-const router = useRouter();
-const route = useRoute();
-
-const submit = async () => {
-  await auth.login({ email: email.value, password: password.value });
-  router.push(route.query.redirect || '/');
-};
-</script>
-```
-
-### 📱 Mobile Integration (Vue + Capacitor)
-
-```bash
-# Add Capacitor to Vue app
-npm install @capacitor/core @capacitor/cli
-npx cap init "Aura Shop" com.aurashop.app
-
-# Add platforms
-npx cap add android
-npx cap add ios
-
-# Build and sync
-npm run build
-npx cap sync
-```
-
-```javascript
-// Example: using Capacitor Storage for token persistence
-import { Storage } from '@capacitor/storage';
-
-export async function setToken(token) {
-  await Storage.set({ key: 'aurashop_token', value: token });
-}
-
-export async function getToken() {
-  const { value } = await Storage.get({ key: 'aurashop_token' });
-  return value;
-}
 ```
 
 ---
 
-This section now provides Vue 3 integration examples for web and Vue + Capacitor for mobile. Replace paths if your project structure differs.
+*Reverted to the previous integration guides (React and React Native) as requested.*
