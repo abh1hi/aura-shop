@@ -1,5 +1,5 @@
 {
-  "name": "client",
+  "name": "aura-shop-client",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,25 +7,38 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tailwind:init": "tailwindcss init -p"
+    "tailwind:init": "tailwindcss init -p",
+    "lint": "eslint . --ext vue,js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "build:analyze": "vite build --mode analyze",
+    "serve:local": "vite preview --host"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/ios": "^6.1.2",
+    "@vueuse/core": "^10.11.0",
     "chart.js": "^4.5.1",
+    "hammerjs": "^2.0.8",
+    "swiper": "^11.1.12",
     "vue": "^3.4.21",
     "vue-chartjs": "^5.3.2",
     "vue-router": "^4.5.1",
-    "@vueuse/core": "^10.11.0",
+    "vue3-carousel": "^0.3.1",
     "vue3-touch-events": "^4.1.2",
-    "hammerjs": "^2.0.8",
-    "swiper": "^11.1.12",
-    "vue3-carousel": "^0.3.1"
+    "intersection-observer": "^0.12.2",
+    "resize-observer-polyfill": "^1.5.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
+    "@vue/eslint-config-prettier": "^9.0.0",
     "autoprefixer": "^10.4.19",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.27.0",
     "postcss": "^8.4.38",
+    "prettier": "^3.3.3",
     "tailwindcss": "^3.4.3",
-    "vite": "^5.2.0"
+    "vite": "^5.2.0",
+    "vite-plugin-pwa": "^0.20.1",
+    "workbox-window": "^7.1.0"
   }
 }
