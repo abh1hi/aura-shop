@@ -3,7 +3,7 @@
   Purpose: Handles fetching public category data.
 */
 
-const API_URL = 'http://localhost:5000/api/categories/';
+const API_URL = 'https://improved-goggles-v6pqpqrvvj46cwqr7-5000.app.github.dev/api/categories/';
 
 /**
  * Fetches all approved categories from the backend.
