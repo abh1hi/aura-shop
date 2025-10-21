@@ -1,5 +1,8 @@
 {
-  "appId": "com.metaberry.metain",
-  "appName": "metaIn",
-  "webDir": "dist"
+  "appId": "com.aurashop.app",
+  "appName": "Aura Shop",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
 }

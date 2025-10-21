@@ -1,62 +1,42 @@
-import axios from 'axios';
+
+import api from './api';
 
 const API_URL = 'http://localhost:5000/api/cart';
 
-const getCart = async (token) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    };
-    const response = await axios.get(API_URL, config);
-    return response.data;
+const getCart = async () => {
+  return await api(API_URL);
 };
 
-const addToCart = async (itemData, token) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    };
-    const response = await axios.post(API_URL, itemData, config);
-    return response.data;
+const addToCart = async (itemData) => {
+  return await api(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(itemData),
+  });
 };
 
-const removeFromCart = async (itemId, token) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    };
-    const response = await axios.delete(`${API_URL}/${itemId}`, config);
-    return response.data;
+const removeFromCart = async (itemId) => {
+  return await api(`${API_URL}/${itemId}`, {
+    method: 'DELETE',
+  });
 };
 
-
-const updateCartItem = async (itemId, quantity, token) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    };
-    const response = await axios.put(`${API_URL}/${itemId}`, { quantity }, config);
-    return response.data;
+const updateCartItem = async (itemId, quantity) => {
+  return await api(`${API_URL}/${itemId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ quantity }),
+  });
 };
 
-const clearCart = async (token) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    };
-    const response = await axios.delete(API_URL, config);
-    return response.data;
+const clearCart = async () => {
+  return await api(API_URL, {
+    method: 'DELETE',
+  });
 };
 
 export default {
-    getCart,
-    addToCart,
-    removeFromCart,
-    updateCartItem,
-    clearCart,
+  getCart,
+  addToCart,
+  removeFromCart,
+  updateCartItem,
+  clearCart,
 };

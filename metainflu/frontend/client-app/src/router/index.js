@@ -1,6 +1,7 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createMemoryHistory } from 'vue-router';
 import { globalState } from '../main.js';
 import Home from '../pages/Home.vue';
+import HomeNotLogin from '../pages/HomeNotLogin.vue';
 import About from '../pages/About.vue';
 import Contact from '../pages/Contact.vue';
 import Login from '../pages/Login.vue';
@@ -32,7 +33,7 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: Home,
+    component: () => (globalState.isLoggedIn ? Home : HomeNotLogin),
   },
     {
     path: '/product/:id',
@@ -146,7 +147,7 @@ const routes = [
   },
 ];
 const router = createRouter({
-  history: createWebHistory(),
+  history: createMemoryHistory(),
   routes,
 });
 
