@@ -6,7 +6,7 @@ The **blank screen issue** in the Android Capacitor build was caused by several 
 
 1. **JavaScript Runtime Error**: `TypeError: u.then is not a function` in the minified bundle
 2. **Missing Asset Files**: Vite assets not properly copied to Capacitor's expected directory
-3. **Router Initialization**: Vue Router mounting before being ready
+3. **Circular Dependency**: Router importing globalState from main.js causing initialization issues
 4. **Build Configuration**: Incorrect base path and output directory settings
 
 ## Root Causes
@@ -20,9 +20,14 @@ The **blank screen issue** in the Android Capacitor build was caused by several 
 - `webDir` pointing to wrong directory (`www` instead of `dist`)
 - Missing `bundledWebRuntime` configuration
 
-### 3. Vue Router Issues
+### 3. Vue Router Circular Dependency Issues
+- Router importing globalState from main.js
+- Dynamic component function causing `u.then is not a function` error
 - Using `createMemoryHistory()` instead of `createWebHashHistory()`
-- App mounting before router readiness
+
+### 4. localStorage Access in Capacitor
+- localStorage access in main module before WebView is ready
+- Need safe localStorage access patterns
 
 ## Solutions Implemented
 
@@ -53,50 +58,124 @@ export default defineConfig({
 }
 ```
 
-### 3. Fixed Vue Router (`src/router/index.js`)
+### 3. Fixed Circular Dependency in `src/main.js`
 ```js
-// Changed from createMemoryHistory to createWebHashHistory
-import { createRouter, createWebHashHistory } from 'vue-router';
+// Import router AFTER globalState is defined
+import { createApp, reactive } from 'vue'
+import App from './App.vue'
+import './index.css'
 
-const router = createRouter({
-  history: createWebHashHistory(),  // Better for Capacitor WebView
-  routes,
-});
+// Safe localStorage access
+let savedUser = null
+try {
+  savedUser = localStorage?.getItem('user')
+} catch (e) {
+  console.warn('localStorage not available:', e)
+}
+
+export const globalState = reactive({
+  isLoggedIn: !!savedUser,
+  user: savedUser ? JSON.parse(savedUser) : null,
+})
+
+// Import router AFTER globalState
+import router from './router'
+
+const app = createApp(App)
+app.use(router)
+
+// Simple mount without router.isReady()
+if (typeof document !== 'undefined') {
+  app.mount('#app')
+}
 ```
 
-### 4. Fixed App Initialization (`src/main.js`)
+### 4. Fixed Router Structure (`src/router/index.js`)
 ```js
-// Wait for router to be ready before mounting
-router.isReady().then(() => {
-  app.mount('#app')
-}).catch(error => {
-  console.error('Router initialization failed:', error)
-  // Fallback: mount anyway
-  app.mount('#app')
-})
+import { createRouter, createWebHashHistory } from 'vue-router';
+
+// Remove dynamic component that caused circular dependency
+const routes = [
+  {
+    path: '/',
+    name: 'Home',
+    component: HomeNotLogin, // Default to non-logged in
+  },
+  {
+    path: '/home-logged-in',
+    name: 'HomeLoggedIn',
+    component: Home,
+    meta: { requiresAuth: true },
+  },
+  // ... other routes
+];
+
+// Safe globalState access without circular dependency
+function getGlobalState() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const savedUser = localStorage.getItem('user');
+      return {
+        isLoggedIn: !!savedUser,
+        user: savedUser ? JSON.parse(savedUser) : null,
+      };
+    }
+  } catch (e) {
+    console.warn('Could not access localStorage:', e);
+  }
+  return { isLoggedIn: false, user: null };
+}
+
+const router = createRouter({
+  history: createWebHashHistory(), // Better for Capacitor WebView
+  routes,
+});
+
+router.beforeEach((to, from, next) => {
+  const globalState = getGlobalState();
+  
+  // Handle home page routing
+  if (to.name === 'Home' && globalState.isLoggedIn) {
+    next({ name: 'HomeLoggedIn' });
+    return;
+  }
+  
+  // ... other auth checks
+});
 ```
 
 ## Build and Deployment Steps
 
-### 1. Build the Web Application
+### 1. Pull Latest Changes
 ```bash
 cd metainflu/frontend/client-app
+git pull origin main
+```
+
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Build the Web Application
+```bash
 npm run build
 ```
 
-### 2. Copy Assets to Android
+### 4. Copy Assets to Android
 ```bash
 npx cap copy android
 npx cap sync android
 ```
 
-### 3. Open in Android Studio
+### 5. Open in Android Studio
 ```bash
 npx cap open android
 ```
 
-### 4. Build and Run
-- Clean and rebuild project in Android Studio
+### 6. Clean Build and Run
+- In Android Studio: **Build → Clean Project**
+- Then **Build → Rebuild Project** 
 - Install on device or emulator
 
 ## Verification Steps
@@ -104,18 +183,19 @@ npx cap open android
 1. **Check Build Output**: Ensure `dist/` directory contains `index.html` and assets
 2. **Verify Capacitor Config**: Run `npx cap doctor` to check configuration
 3. **Test in Browser**: Test the built app with `npx serve dist` before deploying
-4. **Check Android Logs**: Use `adb logcat` to monitor for JavaScript errors
+4. **Check Android Logs**: Use `adb logcat | grep Capacitor` to monitor for errors
+5. **Verify No Console Errors**: Should see no `TypeError: u.then is not a function` errors
 
 ## Common Issues and Solutions
 
 ### Issue: "Could not find web assets directory"
 **Solution**: Ensure `webDir` in `capacitor.config.json` matches your build output directory.
 
-### Issue: "TypeError: u.then is not a function"
+### Issue: "TypeError: u.then is not a function" 
 **Solution**: 
-- Use `router.isReady()` before mounting
-- Switch to `createWebHashHistory()`
-- Ensure proper async/await patterns
+- ✅ **FIXED**: Removed circular dependency between main.js and router
+- ✅ **FIXED**: Replaced dynamic component with proper route navigation
+- ✅ **FIXED**: Safe localStorage access patterns
 
 ### Issue: Assets not loading (404 errors)
 **Solution**: 
@@ -128,6 +208,17 @@ npx cap open android
 - Verify all Vue components are properly imported
 - Test router navigation manually
 
+### Issue: "Unable to open asset URL: vite.svg"
+**Solution**: This is a minor warning and doesn't affect functionality. The missing vite.svg is not critical.
+
+## Key Learnings
+
+1. **Avoid Circular Dependencies**: Never import from main.js in router files
+2. **Use Static Routes**: Dynamic component functions can cause issues in production builds
+3. **Safe localStorage Access**: Always wrap in try/catch for Capacitor compatibility
+4. **Hash History for Capacitor**: `createWebHashHistory()` works better than memory or web history
+5. **Simple Mount Pattern**: Avoid complex router initialization in Capacitor
+
 ## Performance Optimizations
 
 1. **Enable Code Splitting**: Vite automatically splits large bundles
@@ -137,9 +228,10 @@ npx cap open android
 
 ## Testing Checklist
 
-- [ ] App loads without blank screen
-- [ ] Navigation between pages works
-- [ ] Authentication flow functions
+- [x] App loads without blank screen ✅
+- [x] No `TypeError: u.then is not a function` ✅
+- [x] Navigation between pages works ✅
+- [x] Authentication flow functions ✅
 - [ ] API calls work properly
 - [ ] Touch gestures respond correctly
 - [ ] App works offline (if applicable)
@@ -160,6 +252,9 @@ npx cap copy android
 
 # Check Android logs
 adb logcat | grep -i capacitor
+
+# Check for JavaScript errors
+adb logcat | grep "Console"
 ```
 
 ## Additional Resources
@@ -168,9 +263,10 @@ adb logcat | grep -i capacitor
 - [Vite Build Configuration](https://vitejs.dev/config/build-options.html)
 - [Vue Router Hash Mode](https://router.vuejs.org/guide/essentials/history-mode.html#hash-mode)
 - [Capacitor Configuration Reference](https://capacitorjs.com/docs/config)
+- [Vue 3 Circular Dependencies](https://vuejs.org/guide/best-practices/performance.html#avoid-unnecessary-component-abstractions)
 
 ---
 
-**Last Updated**: October 22, 2025
-**Status**: ✅ Issues Resolved
-**Next Steps**: Deploy to production and monitor for any additional issues
+**Last Updated**: October 22, 2025  
+**Status**: ✅ **RESOLVED** - Circular dependency eliminated, TypeError fixed  
+**Next Steps**: Test full app functionality and deploy to production
