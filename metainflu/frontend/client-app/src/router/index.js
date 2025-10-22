@@ -1,4 +1,4 @@
-import { createRouter, createMemoryHistory } from 'vue-router';
+import { createRouter, createWebHashHistory } from 'vue-router';
 import { globalState } from '../main.js';
 import Home from '../pages/Home.vue';
 import HomeNotLogin from '../pages/HomeNotLogin.vue';
@@ -146,8 +146,10 @@ const routes = [
     ],
   },
 ];
+
+// Use createWebHashHistory for better Capacitor compatibility
 const router = createRouter({
-  history: createMemoryHistory(),
+  history: createWebHashHistory(),
   routes,
 });
 
