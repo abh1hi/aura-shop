@@ -1,7 +1,7 @@
 
 import api from './api';
 
-const API_URL = 'http://localhost:5000/api/cart';
+const API_URL = 'https://3czzqk3l-5000.use2.devtunnels.ms/api/cart';
 
 const getCart = async () => {
   return await api(API_URL);

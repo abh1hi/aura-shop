@@ -1,7 +1,7 @@
 
 import api from './api';
 
-const API_URL = 'http://localhost:5000/api/orders/';
+const API_URL = 'https://3czzqk3l-5000.use2.devtunnels.ms/api/orders/';
 
 const createOrder = async (orderData) => {
   return await api(API_URL, {
