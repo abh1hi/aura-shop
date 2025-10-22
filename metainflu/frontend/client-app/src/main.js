@@ -29,5 +29,11 @@ app.use(Vue3TouchEvents, {
   longTapTimeInterval: 400
 })
 
-// Mount the app
-app.mount('#app')
+// Fix for Capacitor: Wait for router to be ready before mounting
+router.isReady().then(() => {
+  app.mount('#app')
+}).catch(error => {
+  console.error('Router initialization failed:', error)
+  // Fallback: mount anyway
+  app.mount('#app')
+})
