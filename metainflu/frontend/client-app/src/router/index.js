@@ -1,6 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 
-// Import components directly to avoid circular dependencies
+// Import components directly
 import Home from '../pages/Home.vue';
 import HomeNotLogin from '../pages/HomeNotLogin.vue';
 import About from '../pages/About.vue';
@@ -32,12 +32,14 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    // Use a component function that checks auth state dynamically
-    component: () => {
-      // Import globalState here to avoid circular dependency
-      const { globalState } = require('../main.js');
-      return globalState.isLoggedIn ? Home : HomeNotLogin;
-    },
+    // Use HomeNotLogin as default, redirect in beforeEach if logged in
+    component: HomeNotLogin,
+  },
+  {
+    path: '/home-logged-in',
+    name: 'HomeLoggedIn', 
+    component: Home,
+    meta: { requiresAuth: true },
   },
   {
     path: '/product/:id',
@@ -157,19 +159,33 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from, next) => {
-  // Get globalState here to avoid circular dependency
-  let globalState;
+// Function to get global state safely
+function getGlobalState() {
   try {
-    globalState = require('../main.js').globalState;
+    // Check if we have localStorage available
+    if (typeof localStorage !== 'undefined') {
+      const savedUser = localStorage.getItem('user');
+      return {
+        isLoggedIn: !!savedUser,
+        user: savedUser ? JSON.parse(savedUser) : null,
+      };
+    }
   } catch (e) {
-    console.warn('Could not access globalState:', e);
-    next();
+    console.warn('Could not access localStorage:', e);
+  }
+  return { isLoggedIn: false, user: null };
+}
+
+router.beforeEach((to, from, next) => {
+  const globalState = getGlobalState();
+  const isLoggedIn = globalState.isLoggedIn;
+  const userRole = globalState.user ? globalState.user.role : null;
+
+  // Redirect to appropriate home page
+  if (to.name === 'Home' && isLoggedIn) {
+    next({ name: 'HomeLoggedIn' });
     return;
   }
-
-  const isLoggedIn = globalState?.isLoggedIn || false;
-  const userRole = globalState?.user ? globalState.user.role : null;
 
   if (to.meta.requiresAuth && !isLoggedIn) {
     next({ name: 'Login' });
