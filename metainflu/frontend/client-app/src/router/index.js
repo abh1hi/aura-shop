@@ -17,16 +17,6 @@ import LiveChat from '../pages/LiveChat.vue';
 import Shop from '../pages/Shop.vue';
 import ProductDetail from '../pages/ProductDetail.vue';
 
-// Import Vendor Pages
-import VendorPanelLayout from '../layouts/VendorPanelLayout.vue';
-import VendorPanel from '../pages/VendorPanel.vue';
-import AddProduct from '../pages/AddProduct.vue';
-import ManageProducts from '../pages/ManageProducts.vue';
-import OrderFulfillment from '../pages/OrderFulfillment.vue';
-import Analytics from '../pages/Analytics.vue';
-import Returns from '../pages/Returns.vue';
-import Invoices from '../pages/Invoices.vue';
-import EditProduct from '../pages/EditProduct.vue';
 
 const routes = [
   {
@@ -108,48 +98,6 @@ const routes = [
     path: '/live-chat',
     name: 'LiveChat',
     component: LiveChat,
-  },
-  {
-    path: '/vendor-panel',
-    component: VendorPanelLayout,
-    meta: { requiresAuth: true, requiresVendor: true },
-    children: [
-      {
-        path: '',
-        name: 'VendorPanel',
-        component: VendorPanel,
-      },
-      {
-        path: 'products',
-        name: 'ManageProducts',
-        component: ManageProducts,
-      },
-      {
-        path: 'products/add',
-        name: 'AddProduct',
-        component: AddProduct,
-      },
-      {
-        path: 'orders',
-        name: 'OrderFulfillment',
-        component: OrderFulfillment,
-      },
-      {
-        path: 'analytics',
-        name: 'Analytics',
-        component: Analytics,
-      },
-      {
-        path: 'returns',
-        name: 'Returns',
-        component: Returns,
-      },
-      {
-        path: 'products/edit/:id',
-        name: 'EditProduct',
-        component: EditProduct,
-      },
-    ],
   },
 ];
 

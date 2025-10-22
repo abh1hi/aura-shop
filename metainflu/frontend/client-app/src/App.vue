@@ -12,9 +12,7 @@
       </router-view>
     </main>
     
-    <!-- Traditional footer for desktop pages -->
-    <Footer v-if="!isMobileRoute" />
-  </div>
+    <!-- Traditional footer for desktop pages -->  </div>
 </template>
 
 <script setup>
