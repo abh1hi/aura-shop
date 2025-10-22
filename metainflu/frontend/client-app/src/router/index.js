@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
-import { globalState } from '../main.js';
+
+// Import components directly to avoid circular dependencies
 import Home from '../pages/Home.vue';
 import HomeNotLogin from '../pages/HomeNotLogin.vue';
 import About from '../pages/About.vue';
@@ -16,7 +17,6 @@ import LiveChat from '../pages/LiveChat.vue';
 import Shop from '../pages/Shop.vue';
 import ProductDetail from '../pages/ProductDetail.vue';
 
-
 // Import Vendor Pages
 import VendorPanelLayout from '../layouts/VendorPanelLayout.vue';
 import VendorPanel from '../pages/VendorPanel.vue';
@@ -28,14 +28,18 @@ import Returns from '../pages/Returns.vue';
 import Invoices from '../pages/Invoices.vue';
 import EditProduct from '../pages/EditProduct.vue';
 
-
 const routes = [
   {
     path: '/',
     name: 'Home',
-    component: () => (globalState.isLoggedIn ? Home : HomeNotLogin),
+    // Use a component function that checks auth state dynamically
+    component: () => {
+      // Import globalState here to avoid circular dependency
+      const { globalState } = require('../main.js');
+      return globalState.isLoggedIn ? Home : HomeNotLogin;
+    },
   },
-    {
+  {
     path: '/product/:id',
     name: 'ProductDetail',
     component: ProductDetail,
@@ -154,13 +158,23 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  const isLoggedIn = globalState.isLoggedIn;
-  const userRole = globalState.user ? globalState.user.role : null;
+  // Get globalState here to avoid circular dependency
+  let globalState;
+  try {
+    globalState = require('../main.js').globalState;
+  } catch (e) {
+    console.warn('Could not access globalState:', e);
+    next();
+    return;
+  }
+
+  const isLoggedIn = globalState?.isLoggedIn || false;
+  const userRole = globalState?.user ? globalState.user.role : null;
 
   if (to.meta.requiresAuth && !isLoggedIn) {
     next({ name: 'Login' });
   } else if (to.meta.requiresVendor && userRole !== 'vendor') {
-    next({ name: 'Home' }); // Or redirect to an unauthorized page
+    next({ name: 'Home' });
   } else {
     next();
   }
