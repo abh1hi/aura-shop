@@ -27,20 +27,65 @@ const app = express();
 const port = process.env.PORT || 5000;
 const mongoURI = process.env.MONGO_URI; 
 
-// Middleware
+// Middleware - Updated CORS for Android Capacitor support
 const corsOptions = {
-  origin: ['http://localhost:5173', 
+  origin: [
+    // Development web servers
+    'http://localhost:5173', 
     'http://127.0.0.1:5173',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-'http://localhost:5174',
-'http://127.0.0.1:5174','https://3czzqk3l-5174.use2.devtunnels.ms'],
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+    'https://3czzqk3l-5174.use2.devtunnels.ms',
+    
+    // Capacitor Android/iOS - localhost with https
+    'https://localhost',
+    'http://localhost',
+    'capacitor://localhost',
+    'ionic://localhost',
+    
+    // Allow any localhost with different ports for development
+    /^http:\/\/localhost:[0-9]+$/,
+    /^https:\/\/localhost:[0-9]+$/,
+    /^http:\/\/127\.0\.0\.1:[0-9]+$/,
+    /^https:\/\/127\.0\.0\.1:[0-9]+$/
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization',
+    'Accept',
+    'Origin',
+    'X-Requested-With',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
+  credentials: true,
+  optionsSuccessStatus: 200, // For legacy browser support
+  preflightContinue: false
 };
 
 app.use(cors(corsOptions));
+
+// Additional headers for Capacitor compatibility
+app.use((req, res, next) => {
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept,Origin,X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    return res.status(200).json({});
+  }
+  
+  // Set headers for all requests
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Log requests for debugging
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} from ${req.headers.origin || 'unknown origin'}`);
+  
+  next();
+});
+
 app.use(express.json());
 
 // Database Connection
@@ -72,7 +117,34 @@ app.get('/api/protected', protect, (req, res) => {
 
 // Health check route
 app.get('/', (req, res) => {
-  res.send('API is running...');
+  res.status(200).json({
+    message: 'Aura Shop API is running...',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// API info route for debugging
+app.get('/api/info', (req, res) => {
+  res.status(200).json({
+    message: 'Aura Shop API Information',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      products: '/api/products', 
+      categories: '/api/categories',
+      orders: '/api/orders',
+      cart: '/api/cart',
+      admin: '/api/admin',
+      vendor: '/api/vendor',
+      home: '/api/home'
+    },
+    cors: {
+      enabled: true,
+      allowsCredentials: true,
+      supportsMobile: true
+    }
+  });
 });
 
 // Error handler
@@ -81,5 +153,6 @@ app.use(errorHandler);
 // Start server
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
+  console.log(`📱 Mobile apps can connect via: http://YOUR_IP:${port}`);
+  console.log(`🌐 Web apps can connect via: http://localhost:${port}`);
 });
-
