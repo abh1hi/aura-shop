@@ -1,5 +1,5 @@
 <template>
-  <div class="product-detail-page mobile-first" v-touch:swipe="onSwipe">
+  <div class="product-detail-page mobile-first" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
     <!-- Mobile Header -->
     <header class="mobile-header">
       <div class="header-content">
@@ -39,7 +39,7 @@
       <div v-else-if="product" class="product-content">
         <!-- Image Gallery -->
         <section class="image-gallery">
-          <div class="main-image-container" v-touch:swipe.left="nextImage" v-touch:swipe.right="prevImage">
+          <div class="main-image-container" @touchstart="handleImageTouchStart" @touchend="handleImageTouchEnd">
             <img 
               :src="selectedImage" 
               :alt="product.name" 
@@ -297,13 +297,20 @@ import { useRoute, useRouter } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
 import productService from '../services/productService'
 import homeService from '../services/homeService'
-import cartService from '../services/cartService'
+import { useCart } from '../composables/useCart'
 import { useAuth } from '../composables/useAuth'
 import { colorMap } from '../utils/colors'
 
 const route = useRoute()
 const router = useRouter()
 const { token } = useAuth()
+const { addToCart: addToCartComposable } = useCart()
+
+// Touch handling state
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const imageTouchStartX = ref(0)
+const imageTouchStartY = ref(0)
 
 // Reactive data
 const product = ref(null)
@@ -420,6 +427,56 @@ const material = computed(() => {
   return materialAttribute ? materialAttribute.value : 'N/A'
 })
 
+// Touch event handlers
+const handleTouchStart = (e) => {
+  touchStartX.value = e.touches[0].clientX
+  touchStartY.value = e.touches[0].clientY
+}
+
+const handleTouchEnd = (e) => {
+  if (!touchStartX.value || !touchStartY.value) return
+  
+  const touchEndX = e.changedTouches[0].clientX
+  const touchEndY = e.changedTouches[0].clientY
+  const deltaX = touchEndX - touchStartX.value
+  const deltaY = touchEndY - touchStartY.value
+  
+  // Only handle swipe if horizontal movement is significant
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+    // This is a general page swipe, could be used for navigation
+    // Currently not implementing any specific behavior
+  }
+  
+  touchStartX.value = 0
+  touchStartY.value = 0
+}
+
+const handleImageTouchStart = (e) => {
+  imageTouchStartX.value = e.touches[0].clientX
+  imageTouchStartY.value = e.touches[0].clientY
+}
+
+const handleImageTouchEnd = (e) => {
+  if (!imageTouchStartX.value || !imageTouchStartY.value) return
+  
+  const touchEndX = e.changedTouches[0].clientX
+  const touchEndY = e.changedTouches[0].clientY
+  const deltaX = touchEndX - imageTouchStartX.value
+  const deltaY = touchEndY - imageTouchStartY.value
+  
+  // Only handle swipe if horizontal movement is significant and greater than vertical
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+    if (deltaX > 0) {
+      prevImage() // Swipe right = previous image
+    } else {
+      nextImage() // Swipe left = next image
+    }
+  }
+  
+  imageTouchStartX.value = 0
+  imageTouchStartY.value = 0
+}
+
 // Methods
 const fetchProductData = async () => {
   isLoading.value = true
@@ -439,7 +496,7 @@ const fetchProductData = async () => {
       initializeDefaultVariant()
     }
   } catch (err) {
-    
+    console.error('Failed to fetch product data:', err)
     error.value = 'Failed to load product. Please try again.'
   } finally {
     isLoading.value = false
@@ -450,7 +507,7 @@ const fetchShippingInfo = async () => {
   try {
     shippingInfo.value = await homeService.getShippingInfo()
   } catch (error) {
-    
+    console.error('Failed to fetch shipping info:', error)
   }
 }
 
@@ -517,23 +574,36 @@ const addToCart = async () => {
   addingToCart.value = true
 
   try {
-    const itemData = {
+    const cartData = {
       productId: product.value._id,
-      quantity: quantity.value,
-      size: selectedVariants.value.Size,
-      color: selectedVariants.value.Color,
+      quantity: quantity.value
     }
-    await cartService.addToCart(itemData, token.value)
+
+    // Add variant information if available
+    if (selectedVariant.value) {
+      cartData.variantId = selectedVariant.value._id
+      cartData.variant = {
+        _id: selectedVariant.value._id,
+        sku: selectedVariant.value.sku,
+        price: selectedVariant.value.price,
+        attributes: selectedVariant.value.attributes || [],
+        images: selectedVariant.value.images || [],
+        stock: selectedVariant.value.stock
+      }
+    }
+
+    console.log('Adding to cart with data:', cartData)
+    await addToCartComposable(cartData)
 
     // Success feedback
     if (navigator.vibrate) {
       navigator.vibrate(50)
     }
 
-    // Could show toast notification here
+    // Success notification
     alert('Added to cart successfully!')
   } catch (error) {
-    
+    console.error('Failed to add to cart:', error)
     alert('Failed to add to cart. Please try again.')
   } finally {
     addingToCart.value = false
@@ -542,8 +612,6 @@ const addToCart = async () => {
 
 const buyNow = () => {
   if (!canAddToCart.value) return
-  
-  
   
   router.push('/checkout')
 }
@@ -584,10 +652,6 @@ const closeImageModal = () => {
 
 const goBack = () => {
   router.go(-1)
-}
-
-const onSwipe = (event) => {
-  
 }
 
 const handleImageError = (event) => {
