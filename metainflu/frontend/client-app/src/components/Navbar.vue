@@ -21,8 +21,9 @@
             <button class="nav-link">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </button>
-            <router-link to="/cart" class="nav-link">
+            <router-link to="/cart" class="nav-link relative">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+              <span v-if="cartCount > 0" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">{{ cartCount }}</span>
             </router-link>
             <template v-if="isLoggedIn">
               <router-link to="/account" class="nav-link">
@@ -128,9 +129,10 @@
         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
         <span class="text-xs">Shop</span>
       </router-link>
-      <router-link to="/cart" class="bottom-nav-link">
+      <router-link to="/cart" class="bottom-nav-link relative">
         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
         <span class="text-xs">Cart</span>
+        <span v-if="cartCount > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-bold text-[10px]">{{ cartCount > 99 ? '99+' : cartCount }}</span>
       </router-link>
       <router-link to="/account" class="bottom-nav-link">
         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
@@ -143,11 +145,18 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
+import { useCart } from '../composables/useCart';
+import { globalState } from '../main';
 
 const isMobileMenuOpen = ref(false);
-const isLoggedIn = ref(false);
 const isScrolled = ref(false);
 const route = useRoute();
+
+// Cart functionality
+const { cartCount, initializeCart } = useCart();
+
+// Authentication state
+const isLoggedIn = computed(() => globalState.isLoggedIn);
 
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 20;
@@ -155,6 +164,11 @@ const handleScroll = () => {
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll);
+  
+  // Initialize cart if user is logged in
+  if (isLoggedIn.value) {
+    initializeCart();
+  }
 });
 
 onUnmounted(() => {
@@ -162,8 +176,18 @@ onUnmounted(() => {
 });
 
 const logout = () => {
-  isLoggedIn.value = false;
+  // Clear localStorage
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+  
+  // Update global state
+  globalState.isLoggedIn = false;
+  globalState.user = null;
+  
   isMobileMenuOpen.value = false;
+  
+  // Redirect to home or login
+  window.location.href = '/';
 };
 
 const isTransparentPath = computed(() => {
