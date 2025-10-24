@@ -19,7 +19,15 @@ const getCart = asyncHandler(async (req, res) => {
 // @route   POST /api/cart
 // @access  Private
 const addToCart = asyncHandler(async (req, res) => {
-    const { productId, quantity, variant } = req.body;
+    const { productId, quantity = 1, variant, variantId, variantSku } = req.body;
+
+    console.log('Cart Controller - Add to cart request:', {
+        productId,
+        quantity,
+        variantId,
+        variantSku,
+        hasVariant: !!variant
+    });
 
     const product = await Product.findById(productId);
 
@@ -34,21 +42,88 @@ const addToCart = asyncHandler(async (req, res) => {
         cart = await Cart.create({ user: req.user._id, items: [] });
     }
 
-    const itemIndex = cart.items.findIndex(
-        (item) =>
-            item.product.toString() === productId &&
-            item.variant === variant
-    );
+    // Find existing item based on product and variant
+    const itemIndex = cart.items.findIndex(item => {
+        const isSameProduct = item.product.toString() === productId;
+        
+        // If no variant info provided, match items without variants
+        if (!variantId && !variantSku && !variant) {
+            return isSameProduct && !item.variantId;
+        }
+        
+        // Match by variantId first
+        if (variantId) {
+            return isSameProduct && item.variantId === variantId;
+        }
+        
+        // Match by variantSku if provided
+        if (variantSku) {
+            return isSameProduct && item.variantId === variantSku;
+        }
+        
+        // Fallback to comparing variant objects (legacy)
+        if (variant && item.variant) {
+            try {
+                const itemVariantStr = typeof item.variant === 'string' 
+                    ? item.variant 
+                    : JSON.stringify(item.variant);
+                const newVariantStr = typeof variant === 'string' 
+                    ? variant 
+                    : JSON.stringify(variant);
+                return isSameProduct && itemVariantStr === newVariantStr;
+            } catch (err) {
+                console.error('Error comparing variants:', err);
+                return false;
+            }
+        }
+        
+        return false;
+    });
 
     if (itemIndex > -1) {
+        // Update existing item quantity
         cart.items[itemIndex].quantity += quantity;
+        console.log('Updated existing cart item');
     } else {
-        cart.items.push({ product: productId, quantity, variant });
+        // Create new cart item
+        const newItem = {
+            product: productId,
+            quantity
+        };
+
+        // Add variant information if provided
+        if (variantId) {
+            newItem.variantId = variantId;
+        } else if (variantSku) {
+            newItem.variantId = variantSku;
+        }
+
+        if (variant) {
+            newItem.variant = variant;
+        }
+
+        // Backward compatibility: extract legacy size/color from variant
+        if (variant && typeof variant === 'object') {
+            if (variant.attributes) {
+                const sizeAttr = variant.attributes.find(attr => attr.name.toLowerCase() === 'size');
+                const colorAttr = variant.attributes.find(attr => attr.name.toLowerCase() === 'color');
+                
+                if (sizeAttr) newItem.size = sizeAttr.value;
+                if (colorAttr) newItem.color = colorAttr.value;
+            }
+        }
+
+        cart.items.push(newItem);
+        console.log('Added new cart item:', newItem);
     }
 
     await cart.save();
 
     const populatedCart = await Cart.findOne({ user: req.user._id }).populate('items.product');
+    console.log('Cart saved successfully, returning:', {
+        itemCount: populatedCart.items.length,
+        cartId: populatedCart._id
+    });
 
     res.status(201).json(populatedCart);
 });
@@ -69,7 +144,6 @@ const removeFromCart = asyncHandler(async (req, res) => {
         throw new Error('Cart not found');
     }
 });
-
 
 // @desc    Update cart item
 // @route   PUT /api/cart/:id
