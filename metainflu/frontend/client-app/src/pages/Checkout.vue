@@ -68,9 +68,20 @@
         <aside class="order-summary">
           <h2 class="text-xl font-bold mb-6">Order Summary</h2>
           <div class="space-y-4">
-            <div v-for="item in cartItems" :key="item.product._id" class="flex justify-between items-center text-sm">
-              <span class="text-gray-600">{{ item.product.name }} (x{{ item.quantity }})</span>
-              <span class="font-medium">${{ (item.product.price * item.quantity).toFixed(2) }}</span>
+            <div v-for="item in cartItems" :key="item._id || (item.product && item.product._id)" class="flex justify-between items-center text-sm">
+              <span class="text-gray-600">
+                {{ item.product?.name }}
+                <template v-if="item.variant?.attributes && item.variant.attributes.length">
+                  —
+                  <span v-for="(attr, idx) in item.variant.attributes" :key="idx">
+                    {{ attr.name }}: {{ attr.value }}<span v-if="idx < item.variant.attributes.length - 1">, </span>
+                  </span>
+                </template>
+                (x{{ item.quantity }})
+              </span>
+              <span class="font-medium">
+                ${{ linePrice(item).toFixed(2) }}
+              </span>
             </div>
           </div>
           <div class="border-t border-gray-200 my-6"></div>
@@ -133,7 +144,19 @@ const fetchCart = async () => {
     isLoading.value = true;
     try {
         const data = await cartService.getCart();
-        cartItems.value = data.items || [];
+        // Ensure cart items preserve variant and product pricing
+        cartItems.value = (data.items || []).map(item => ({
+          ...item,
+          // Coerce numeric price for safety
+          product: {
+            ...(item.product || {}),
+            price: Number(item.product?.price ?? 0)
+          },
+          variant: item.variant ? {
+            ...item.variant,
+            price: Number(item.variant?.price ?? item.product?.price ?? 0)
+          } : null
+        }));
         if (cartItems.value.length === 0) {
             error.value = "Your cart is empty. Please add items to proceed.";
         }
@@ -145,13 +168,17 @@ const fetchCart = async () => {
     }
 };
 
+// Compute line price preferring variant price when present
+const unitPrice = (item) => {
+  if (item?.variant && item.variant.price != null) return Number(item.variant.price) || 0;
+  if (item?.product && item.product.price != null) return Number(item.product.price) || 0;
+  return 0;
+};
+
+const linePrice = (item) => unitPrice(item) * (item.quantity || 0);
+
 const cartTotal = computed(() => {
-    const subtotal = cartItems.value.reduce((acc, item) => {
-        const price = item.product?.price || 0;
-        const quantity = item.quantity || 0;
-        return acc + (price * quantity);
-    }, 0);
-    
+    const subtotal = cartItems.value.reduce((acc, item) => acc + linePrice(item), 0);
     const shipping = subtotal > 100 ? 0 : 10.00;
     const total = subtotal + shipping;
     
@@ -171,6 +198,13 @@ const placeOrder = async () => {
         const payload = {
             shippingAddress: formData.value.shippingAddress,
             paymentMethod: formData.value.paymentDetails.paymentMethod,
+            items: cartItems.value.map(item => ({
+              productId: item.product?._id,
+              variantId: item.variant?._id,
+              quantity: item.quantity,
+              unitPrice: unitPrice(item),
+              linePrice: linePrice(item)
+            })),
             subtotal: cartTotal.value.subtotal,
             shippingCost: cartTotal.value.shipping,
             total: cartTotal.value.total,
