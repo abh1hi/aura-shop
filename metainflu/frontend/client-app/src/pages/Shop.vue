@@ -325,40 +325,70 @@ const selectedColors = ref([])
 const availableSizes = ref(['XS', 'S', 'M', 'L', 'XL', 'XXL'])
 const availableColors = ref(['Black', 'White', 'Gray', 'Navy', 'Brown', 'Beige'])
 
-// Computed properties
+// Fixed computed properties with proper variant handling
 const productsWithVariants = computed(() => {
-  return allProducts.value.flatMap(product => {
+  const expanded = []
+  
+  allProducts.value.forEach(product => {
     if (product.variants && product.variants.length > 0) {
-      return product.variants.map(variant => {
-        const imageUrl = (variant.images && variant.images.length > 0) 
-          ? variant.images[0] 
-          : (product.images && product.images.length > 0 ? product.images[0].url : 'https://via.placeholder.com/300')
-        
-        return {
-          ...product,
-          key: `${product._id}-${variant.sku || variant._id}`,
-          price: variant.price,
-          stock: variant.stock,
+      product.variants.forEach(variant => {
+        // Build each "card product" with variant-specific fields
+        expanded.push({
+          // Base product identity
+          _id: product._id,
+          key: `${product._id}-${variant._id || variant.sku || variant.price || ''}`,
+          name: product.name,
+          description: product.description,
+          categories: product.categories || [],
+          createdAt: product.createdAt,
+          
+          // Variant-first fields used by ProductCard
+          price: Number(variant.price ?? product.price ?? 0),
+          stock: Number(variant.stock ?? 0),
+          images: Array.isArray(variant.images) && variant.images.length > 0
+            ? variant.images.map(img => ({ url: img }))
+            : (Array.isArray(product.images) && product.images.length > 0
+              ? product.images.map(img => ({ url: img.url || img }))
+              : [{ url: 'https://via.placeholder.com/300' }]),
+          
+          // Extra fields for downstream usage
           sku: variant.sku,
-          images: [{ url: imageUrl }],
-          variantAttributes: variant.attributes,
-          currentVariant: variant, // Store the current variant for cart operations
+          variantAttributes: Array.isArray(variant.attributes) ? variant.attributes : [],
+          currentVariant: {
+            _id: variant._id,
+            sku: variant.sku,
+            price: variant.price,
+            stock: variant.stock,
+            images: variant.images || [],
+            attributes: Array.isArray(variant.attributes) ? variant.attributes : []
+          },
+          
+          // Demo fields
           rating: 4.5 + Math.random() * 0.5,
           reviews: Math.floor(Math.random() * 500) + 50,
           sizes: ['S', 'M', 'L', 'XL']
-        }
+        })
       })
     } else {
-      return {
+      // Fallback for products without variants
+      expanded.push({
         ...product,
         key: product._id,
-        price: product.price || 0,
+        price: Number(product.price || 0),
+        stock: Number(product.stock || 0),
+        images: Array.isArray(product.images) && product.images.length > 0
+          ? product.images.map(img => ({ url: img.url || img }))
+          : [{ url: 'https://via.placeholder.com/300' }],
+        currentVariant: null, // No variant for base products
+        variantAttributes: [],
         rating: 4.5 + Math.random() * 0.5,
         reviews: Math.floor(Math.random() * 500) + 50,
         sizes: ['S', 'M', 'L', 'XL']
-      }
+      })
     }
   })
+  
+  return expanded
 })
 
 const filteredProducts = computed(() => {
