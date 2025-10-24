@@ -167,20 +167,33 @@ const addToCart = async () => {
 
   isAdding.value = true
   try {
-    await cartService.addItem({
+    // Fixed: Changed from cartService.addItem to cartService.addToCart
+    // This was the main issue causing the cart functionality to fail
+    const result = await cartService.addToCart({
       productId: props.product._id,
       quantity: 1,
       variant: props.product.sku || null
     })
 
+    console.log('Successfully added to cart:', result)
+    
+    // Emit success event
     emit('addedToCart', props.product)
 
+    // Haptic feedback for mobile devices
     if (navigator.vibrate) {
       navigator.vibrate(50)
     }
 
+    // Optional: You can add a success toast notification here
+    // showSuccessToast('Item added to cart!')
+
   } catch (error) {
     console.error('Failed to add to cart:', error)
+    
+    // Show error feedback to user
+    // You can replace this alert with a more elegant toast notification
+    alert('Failed to add item to cart. Please try again.')
   } finally {
     isAdding.value = false
   }
