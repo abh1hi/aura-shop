@@ -385,26 +385,30 @@ const selectedVariant = computed(() => {
   })
 })
 
+// FIXED: Proper price calculation with number coercion
 const displayedPrice = computed(() => {
-  if (selectedVariant.value) {
-    return selectedVariant.value.price?.toFixed(2) || '0.00'
+  if (selectedVariant.value && selectedVariant.value.price != null) {
+    return Number(selectedVariant.value.price).toFixed(2)
   }
-  if (product.value && product.value.price) {
-    return product.value.price.toFixed(2)
+  if (product.value && product.value.price != null) {
+    return Number(product.value.price).toFixed(2)
   }
   return '0.00'
 })
 
 const originalPrice = computed(() => {
-  if (selectedVariant.value && selectedVariant.value.originalPrice) {
-    return selectedVariant.value.originalPrice.toFixed(2)
+  if (selectedVariant.value && selectedVariant.value.originalPrice != null) {
+    return Number(selectedVariant.value.originalPrice).toFixed(2)
+  }
+  if (product.value && product.value.originalPrice != null) {
+    return Number(product.value.originalPrice).toFixed(2)
   }
   return null
 })
 
 const discountPercentage = computed(() => {
   if (originalPrice.value && displayedPrice.value) {
-    const discount = ((originalPrice.value - displayedPrice.value) / originalPrice.value) * 100
+    const discount = ((Number(originalPrice.value) - Number(displayedPrice.value)) / Number(originalPrice.value)) * 100
     return Math.round(discount)
   }
   return 0
@@ -412,13 +416,22 @@ const discountPercentage = computed(() => {
 
 const maxQuantity = computed(() => {
   if (selectedVariant.value) {
-    return Math.min(selectedVariant.value.stock || 0, 99)
+    return Math.min(Number(selectedVariant.value.stock) || 0, 99)
   }
-  return 99
+  if (product.value) {
+    return Math.min(Number(product.value.stock) || 0, 99)
+  }
+  return 0
 })
 
 const canAddToCart = computed(() => {
-  return selectedVariant.value && selectedVariant.value.stock > 0 && quantity.value <= selectedVariant.value.stock
+  if (selectedVariant.value) {
+    return selectedVariant.value.stock > 0 && quantity.value <= selectedVariant.value.stock
+  }
+  if (product.value) {
+    return (product.value.stock || 0) > 0 && quantity.value <= (product.value.stock || 0)
+  }
+  return false
 })
 
 const material = computed(() => {
