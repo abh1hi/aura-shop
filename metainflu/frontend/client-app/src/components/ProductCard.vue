@@ -11,8 +11,15 @@
     <!-- Product Image Container -->
     <div class="image-container relative overflow-hidden rounded-t-lg">
       <img
-        v-if="product.images && product.images.length > 0"
-        :src="product.images[0].url"
+        v-if="currentVariant?.images?.length > 0"
+        :src="currentVariant.images[0]"
+        :alt="product.name"
+        class="product-image w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+        @error="handleImageError"
+      />
+      <img
+        v-else-if="product.images && product.images.length > 0"
+        :src="product.images[0].url || product.images[0]"
         :alt="product.name"
         class="product-image w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
         @error="handleImageError"
@@ -31,14 +38,31 @@
 
       <!-- Quick Add Button for Mobile -->
       <button
-        v-if="mobile"
+        v-if="mobile && !needsVariantSelection"
         class="quick-add-btn absolute bottom-3 right-3 w-9 h-9 rounded-full bg-gray-900 text-white flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 z-10 hover:bg-gray-700"
         @click.stop="handleAddToCart"
-        :disabled="isAdding"
+        :disabled="isAdding || !isInStock"
       >
         <i v-if="!isAdding" class="fas fa-plus"></i>
         <div v-else class="loading-spinner"></div>
       </button>
+
+      <!-- Variant Selection Required Notice for Mobile -->
+      <button
+        v-if="mobile && needsVariantSelection"
+        class="quick-add-btn absolute bottom-3 right-3 w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 z-10 hover:bg-blue-700"
+        @click.stop="viewDetails"
+      >
+        <i class="fas fa-eye"></i>
+      </button>
+
+      <!-- Stock Badge -->
+      <div v-if="!isInStock" class="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+        Out of Stock
+      </div>
+      <div v-else-if="currentVariant?.stock <= 5" class="absolute top-3 left-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+        {{ currentVariant.stock }} left
+      </div>
     </div>
 
     <!-- Product Info -->
@@ -53,12 +77,15 @@
       <div class="price-rating flex items-baseline justify-between">
         <div class="price">
           <span class="current-price font-bold text-lg text-gray-900">
-            ${{ formatPrice(product.price) }}
+            ${{ formatPrice(displayPrice) }}
           </span>
-          <span v-if="product.originalPrice && product.originalPrice > product.price"
+          <span v-if="product.originalPrice && product.originalPrice > displayPrice"
                 class="original-price ml-2 text-sm text-gray-400 line-through">
             ${{ formatPrice(product.originalPrice) }}
           </span>
+          <div v-if="priceRange" class="text-sm text-gray-600 mt-1">
+            {{ priceRange }}
+          </div>
         </div>
 
         <!-- Rating Stars -->
@@ -70,16 +97,9 @@
         </div>
       </div>
 
-      <!-- Size Options for Mobile -->
-      <div v-if="mobile && product.sizes" class="sizes flex items-center gap-2 mt-3">
-        <span
-          v-for="size in product.sizes.slice(0, 4)"
-          :key="size"
-          class="size-chip text-xs font-medium px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full"
-        >
-          {{ size }}
-        </span>
-        <span v-if="product.sizes.length > 4" class="text-xs text-gray-500">+{{ product.sizes.length - 4 }} more</span>
+      <!-- Variant Options Preview for Mobile -->
+      <div v-if="mobile && hasVariants" class="variants flex items-center gap-2 mt-3">
+        <span class="text-xs text-gray-500">Available in {{ availableVariantsCount }} variants</span>
       </div>
     </div>
 
@@ -89,11 +109,19 @@
       class="cart-overlay absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
     >
       <button
+        v-if="!needsVariantSelection"
         @click.stop="handleAddToCart"
-        :disabled="isAdding"
+        :disabled="isAdding || !isInStock"
         class="add-to-cart-btn text-white text-base font-bold px-6 py-3 rounded-full bg-white/20 backdrop-blur-lg hover:bg-white/30 transition-colors duration-300 disabled:opacity-50"
       >
-        {{ isAdding ? 'Adding...' : 'Add to Cart' }}
+        {{ isAdding ? 'Adding...' : isInStock ? 'Add to Cart' : 'Out of Stock' }}
+      </button>
+      <button
+        v-else
+        @click.stop="viewDetails"
+        class="add-to-cart-btn text-white text-base font-bold px-6 py-3 rounded-full bg-white/20 backdrop-blur-lg hover:bg-white/30 transition-colors duration-300"
+      >
+        Select Options
       </button>
     </div>
   </div>
@@ -128,6 +156,69 @@ const wasLongPress = ref(false)
 
 // Use cart composable for better state management
 const { addToCart } = useCart()
+
+// Variant handling
+const hasVariants = computed(() => {
+  return props.product.variants && props.product.variants.length > 0
+})
+
+const availableVariants = computed(() => {
+  if (!hasVariants.value) return []
+  return props.product.variants.filter(variant => variant.status === 'active' && variant.stock > 0)
+})
+
+const availableVariantsCount = computed(() => availableVariants.value.length)
+
+// Use the first available variant as default, or create a default variant
+const currentVariant = computed(() => {
+  if (availableVariants.value.length > 0) {
+    return availableVariants.value[0]
+  }
+  // Return a default variant structure if no variants exist
+  return {
+    _id: null,
+    sku: props.product.sku || null,
+    price: props.product.price || 0,
+    stock: props.product.stock || 0,
+    attributes: [],
+    images: props.product.images || [],
+    status: 'active'
+  }
+})
+
+// Check if variant selection is needed (multiple variants with different attributes)
+const needsVariantSelection = computed(() => {
+  if (!hasVariants.value) return false
+  if (availableVariants.value.length <= 1) return false
+  
+  // Check if variants have different attributes that would require selection
+  return availableVariants.value.some(variant => 
+    variant.attributes && variant.attributes.length > 0
+  )
+})
+
+const isInStock = computed(() => {
+  return currentVariant.value && currentVariant.value.stock > 0
+})
+
+const displayPrice = computed(() => {
+  return currentVariant.value?.price || props.product.price || 0
+})
+
+// Show price range if variants have different prices
+const priceRange = computed(() => {
+  if (!hasVariants.value || availableVariants.value.length <= 1) return null
+  
+  const prices = availableVariants.value.map(v => v.price).filter(p => p != null)
+  if (prices.length === 0) return null
+  
+  const minPrice = Math.min(...prices)
+  const maxPrice = Math.max(...prices)
+  
+  if (minPrice === maxPrice) return null
+  
+  return `$${formatPrice(minPrice).value} - $${formatPrice(maxPrice).value}`
+})
 
 const formatPrice = computed(() => {
   return (price) => {
@@ -166,28 +257,56 @@ const viewDetails = () => {
 }
 
 const handleAddToCart = async () => {
-  if (isAdding.value) return
+  if (isAdding.value || !isInStock.value) return
+
+  // If variant selection is needed, redirect to product detail page
+  if (needsVariantSelection.value) {
+    viewDetails()
+    return
+  }
 
   isAdding.value = true
   try {
-    // Use the cart composable which automatically updates global cart state
-    const result = await addToCart({
+    // Prepare cart data with proper variant information
+    const cartData = {
       productId: props.product._id,
-      quantity: 1,
-      variant: props.product.sku || null
-    })
+      quantity: 1
+    }
+
+    // Add variant information if available
+    if (currentVariant.value && currentVariant.value._id) {
+      cartData.variantId = currentVariant.value._id
+      cartData.variant = {
+        _id: currentVariant.value._id,
+        sku: currentVariant.value.sku,
+        price: currentVariant.value.price,
+        attributes: currentVariant.value.attributes || [],
+        images: currentVariant.value.images || []
+      }
+    } else if (currentVariant.value?.sku) {
+      // Fallback for products without proper variants structure
+      cartData.variant = {
+        sku: currentVariant.value.sku,
+        price: currentVariant.value.price,
+        attributes: [],
+        images: props.product.images || []
+      }
+    }
+
+    console.log('Adding to cart with data:', cartData)
+    const result = await addToCart(cartData)
 
     console.log('Successfully added to cart:', result)
     
     // Emit success event for parent components
-    emit('addedToCart', props.product)
+    emit('addedToCart', { product: props.product, variant: currentVariant.value })
 
     // Haptic feedback for mobile devices
     if (navigator.vibrate) {
       navigator.vibrate(50)
     }
 
-    // Show success feedback (you can customize this)
+    // Show success feedback
     showSuccessMessage('Added to cart!')
 
   } catch (error) {
@@ -215,7 +334,6 @@ const handleImageError = (event) => {
 
 // Simple toast notification functions
 const showSuccessMessage = (message) => {
-  // You can replace this with a proper toast library like vue-toastification
   const toast = document.createElement('div')
   toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in'
   toast.textContent = message
@@ -228,7 +346,6 @@ const showSuccessMessage = (message) => {
 }
 
 const showErrorMessage = (message) => {
-  // You can replace this with a proper toast library like vue-toastification
   const toast = document.createElement('div')
   toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in'
   toast.textContent = message
