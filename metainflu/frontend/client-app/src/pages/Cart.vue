@@ -32,8 +32,8 @@
                 v-for="item in cartItems" 
                 :key="item.id"
                 class="cart-item"
-                v-touch:swipe.left="() => showItemActions(item.id)"
-                v-touch:swipe.right="() => hideItemActions(item.id)"
+                @touchstart="(e) => handleItemTouchStart(e, item.id)"
+                @touchend="(e) => handleItemTouchEnd(e, item.id)"
               >
                 <div class="item-content">
                   <div class="item-image">
@@ -305,6 +305,13 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
 })
 
+// Touch handling state
+const itemTouchStartX = ref({})
+const itemTouchStartY = ref({})
+const touchStartX = ref(0)
+const touchEndX = ref(0)
+const swipeThreshold = 50
+
 // Reactive data
 const isLoading = ref(true)
 const cartItems = ref([])
@@ -315,9 +322,6 @@ const updatingItem = ref(null)
 const processingCheckout = ref(false)
 const showActions = ref({})
 const showClearModal = ref(false)
-const touchStartX = ref(0);
-const touchEndX = ref(0);
-const swipeThreshold = 50;
 
 // Computed properties
 const totalItems = computed(() => {
@@ -345,6 +349,55 @@ const total = computed(() => {
   return subtotal.value - discountAmount.value + shipping.value + tax.value
 })
 
+// Touch event handlers
+const onTouchStart = (event) => {
+  touchStartX.value = event.touches[0].clientX
+}
+
+const onTouchMove = (event) => {
+  touchEndX.value = event.touches[0].clientX
+}
+
+const onTouchEnd = () => {
+  if (touchStartX.value === 0 || touchEndX.value === 0) return
+  const swipeDistance = touchEndX.value - touchStartX.value
+  
+  if (swipeDistance > swipeThreshold) {
+    router.push('/shop')
+  } else if (swipeDistance < -swipeThreshold) {
+    router.push('/account')
+  }
+
+  touchStartX.value = 0
+  touchEndX.value = 0
+}
+
+const handleItemTouchStart = (event, itemId) => {
+  itemTouchStartX.value[itemId] = event.touches[0].clientX
+  itemTouchStartY.value[itemId] = event.touches[0].clientY
+}
+
+const handleItemTouchEnd = (event, itemId) => {
+  if (!itemTouchStartX.value[itemId] || !itemTouchStartY.value[itemId]) return
+  
+  const touchEndX = event.changedTouches[0].clientX
+  const touchEndY = event.changedTouches[0].clientY
+  const deltaX = touchEndX - itemTouchStartX.value[itemId]
+  const deltaY = touchEndY - itemTouchStartY.value[itemId]
+  
+  // Only handle swipe if horizontal movement is significant
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+    if (deltaX < 0) {
+      showItemActions(itemId) // Swipe left = show actions
+    } else {
+      hideItemActions(itemId) // Swipe right = hide actions
+    }
+  }
+  
+  itemTouchStartX.value[itemId] = 0
+  itemTouchStartY.value[itemId] = 0
+}
+
 // Methods
 const loadCart = async () => {
   isLoading.value = true
@@ -365,7 +418,7 @@ const loadCart = async () => {
       }))
     }
   } catch (error) {
-    
+    console.error('Failed to load cart:', error)
   } finally {
     isLoading.value = false
   }
@@ -382,7 +435,7 @@ const updateQuantity = async (itemId, quantity) => {
       }
     }
   } catch (error) {
-    
+    console.error('Failed to update quantity:', error)
   } finally {
     updatingItem.value = null
   }
@@ -414,7 +467,7 @@ const removeItem = async (itemId) => {
       }
     }
   } catch (error) {
-    
+    console.error('Failed to remove item:', error)
   }
 }
 
@@ -486,7 +539,7 @@ const confirmClearCart = async () => {
       }
     }
   } catch (error) {
-    
+    console.error('Failed to clear cart:', error)
   }
 }
 
@@ -503,34 +556,12 @@ const proceedToCheckout = async () => {
   }
 }
 
-const onTouchStart = (event) => {
-  touchStartX.value = event.touches[0].clientX;
-};
-
-const onTouchMove = (event) => {
-  touchEndX.value = event.touches[0].clientX;
-};
-
-const onTouchEnd = () => {
-  if (touchStartX.value === 0 || touchEndX.value === 0) return;
-  const swipeDistance = touchEndX.value - touchStartX.value;
-  
-  if (swipeDistance > swipeThreshold) {
-    router.push('/shop');
-  } else if (swipeDistance < -swipeThreshold) {
-    router.push('/account');
-  }
-
-  touchStartX.value = 0;
-  touchEndX.value = 0;
-};
-
 const goBack = () => {
   router.go(-1)
 }
 
 const onSwipe = (event) => {
-  
+  console.log('Swipe detected:', event)
 }
 
 const handleImageError = (event) => {
