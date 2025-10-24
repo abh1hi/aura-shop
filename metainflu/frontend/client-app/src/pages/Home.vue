@@ -47,7 +47,7 @@
             >
               <ProductCard
                 v-for="product in newArrivals"
-                :key="product.id"
+                :key="product.key"
                 :product="product"
                 :mobile="true"
                 class="product-card-mobile"
@@ -57,7 +57,7 @@
             <div v-else class="products-grid">
               <ProductCard
                 v-for="product in newArrivals"
-                :key="product.id"
+                :key="product.key"
                 :product="product"
                 :mobile="true"
                 class="product-card-mobile"
@@ -93,7 +93,7 @@
           <div v-if="viewMode === 'list'" class="products-carousel">
             <ProductCard
               v-for="product in trendingProducts"
-              :key="product.id"
+              :key="product.key"
               :product="product"
               :mobile="true"
               class="trending-card"
@@ -102,7 +102,7 @@
           <div v-else class="trending-grid">
             <ProductCard
               v-for="product in trendingProducts"
-              :key="product.id"
+              :key="product.key"
               :product="product"
               :mobile="true"
               class="trending-card"
@@ -138,7 +138,7 @@
           <div class="desktop-products-grid">
             <ProductCard
               v-for="product in newArrivals"
-              :key="product.id"
+              :key="product.key"
               :product="product"
               :mobile="false"
               @click="goToProduct(product)"
@@ -167,7 +167,7 @@
           <div class="desktop-products-grid">
             <ProductCard
               v-for="product in trendingProducts"
-              :key="product.id"
+              :key="product.key"
               :product="product"
               :mobile="false"
               @click="goToProduct(product)"
@@ -209,11 +209,10 @@ const currentBannerIndex = ref(0)
 const cartItems = ref(0)
 const tabsContainer = ref(null)
 const productsCarousel = ref(null)
-const touchStartX = ref(0);
-const touchEndX = ref(0);
-const swipeThreshold = 200; // Minimum swipe distance
-const viewMode = ref('list'); // Add this line
-
+const touchStartX = ref(0)
+const touchEndX = ref(0)
+const swipeThreshold = 200 // Minimum swipe distance
+const viewMode = ref('list') // Add this line
 
 // Category tabs
 const categoryTabs = ref(['Limited', 'Recommended', 'New in', 'Trendy'])
@@ -227,31 +226,68 @@ const featuredCollections = ref([])
 // Computed properties
 const currentHeroBanner = computed(() => heroBanners.value[currentBannerIndex.value])
 
+// Fixed: Use the same variant flattening logic as Shop.vue
 const newArrivals = computed(() => {
-  const allVariants = []
+  const expanded = []
+  
   products.value.forEach(product => {
     if (product.variants && product.variants.length > 0) {
       product.variants.forEach(variant => {
-        allVariants.push({
+        // Build each "card product" with variant-specific fields - same as Shop.vue
+        expanded.push({
+          // Base product identity
           _id: product._id,
-          id: `${product._id}-${variant.sku}`,
+          key: `${product._id}-${variant._id || variant.sku || variant.price || ''}`,
           name: product.name,
-          price: variant.price,
-          images: variant.images?.length > 0 ? [{ url: variant.images[0] }] : product.images,
-          rating: product.ratings.average,
-          reviews: product.ratings.count
+          description: product.description,
+          categories: product.categories || [],
+          createdAt: product.createdAt,
+          
+          // Variant-first fields used by ProductCard
+          price: Number(variant.price ?? product.price ?? 0),
+          stock: Number(variant.stock ?? 0),
+          images: Array.isArray(variant.images) && variant.images.length > 0
+            ? variant.images.map(img => ({ url: img }))
+            : (Array.isArray(product.images) && product.images.length > 0
+              ? product.images.map(img => ({ url: img.url || img }))
+              : [{ url: 'https://via.placeholder.com/300' }]),
+          
+          // Extra fields for downstream usage
+          sku: variant.sku,
+          variantAttributes: Array.isArray(variant.attributes) ? variant.attributes : [],
+          currentVariant: {
+            _id: variant._id,
+            sku: variant.sku,
+            price: variant.price,
+            stock: variant.stock,
+            images: variant.images || [],
+            attributes: Array.isArray(variant.attributes) ? variant.attributes : []
+          },
+          
+          // Demo/display fields
+          rating: product.ratings?.average || 4.5,
+          reviews: product.ratings?.count || 0
         })
       })
     } else {
-      allVariants.push({
+      // Fallback for products without variants
+      expanded.push({
         ...product,
-        id: product._id,
-        rating: product.ratings.average,
-        reviews: product.ratings.count
+        key: product._id,
+        price: Number(product.price || 0),
+        stock: Number(product.stock || 0),
+        images: Array.isArray(product.images) && product.images.length > 0
+          ? product.images.map(img => ({ url: img.url || img }))
+          : [{ url: 'https://via.placeholder.com/300' }],
+        currentVariant: null, // No variant for base products
+        variantAttributes: [],
+        rating: product.ratings?.average || 4.5,
+        reviews: product.ratings?.count || 0
       })
     }
   })
-  return allVariants.slice(0, 10)
+  
+  return expanded.slice(0, 10)
 })
 
 const trendingProducts = computed(() => {
@@ -330,30 +366,30 @@ const onSwipe = (event) => {
 }
 
 const onTouchStart = (event) => {
-      touchStartX.value = event.touches[0].clientX;
-    };
+  touchStartX.value = event.touches[0].clientX
+}
 
-    const onTouchMove = (event) => {
-      touchEndX.value = event.touches[0].clientX;
-    };
+const onTouchMove = (event) => {
+  touchEndX.value = event.touches[0].clientX
+}
 
-    const onTouchEnd = () => {
-      if (touchStartX.value === 0 || touchEndX.value === 0) return;
-      const swipeDistance = touchStartX.value - touchEndX.value;
-      if (swipeDistance > swipeThreshold) {
-        router.push('/shop');
-      }
-      // Reset touch positions
-      touchStartX.value = 0;
-      touchEndX.value = 0;
-    };
+const onTouchEnd = () => {
+  if (touchStartX.value === 0 || touchEndX.value === 0) return
+  const swipeDistance = touchStartX.value - touchEndX.value
+  if (swipeDistance > swipeThreshold) {
+    router.push('/shop')
+  }
+  // Reset touch positions
+  touchStartX.value = 0
+  touchEndX.value = 0
+}
 
 // Fetch products
 const fetchProducts = async () => {
   try {
     products.value = await productService.getProducts()
   } catch (error) {
-    
+    console.error('Failed to fetch products:', error)
   }
 }
 
@@ -361,7 +397,7 @@ const fetchHeroBanners = async () => {
   try {
     heroBanners.value = await homeService.getHeroBanners()
   } catch (error) {
-    
+    console.error('Failed to fetch hero banners:', error)
   }
 }
 
@@ -369,7 +405,7 @@ const fetchFeaturedCollections = async () => {
   try {
     featuredCollections.value = await homeService.getFeaturedCollections()
   } catch (error) {
-    
+    console.error('Failed to fetch featured collections:', error)
   }
 }
 
@@ -623,10 +659,6 @@ onUnmounted(() => {
 
 .trending-products {
   margin-bottom: 2rem;
-}
-
-.view-toggle button.active {
-  background: #e2e8f0;
 }
 
 .products-grid {
