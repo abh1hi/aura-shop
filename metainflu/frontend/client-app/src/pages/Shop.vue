@@ -276,9 +276,10 @@ import ProductCard from '../components/ProductCard.vue'
 import ProductPeekModal from '../components/ProductPeekModal.vue'
 import productService from '../services/productService'
 import categoryService from '../services/categoryService'
-import cartService from '../services/cartService'
+import { useCart } from '../composables/useCart'
 
 const router = useRouter()
+const { addToCart } = useCart()
 
 const isMobile = ref(window.innerWidth < 768)
 
@@ -341,6 +342,7 @@ const productsWithVariants = computed(() => {
           sku: variant.sku,
           images: [{ url: imageUrl }],
           variantAttributes: variant.attributes,
+          currentVariant: variant, // Store the current variant for cart operations
           rating: 4.5 + Math.random() * 0.5,
           reviews: Math.floor(Math.random() * 500) + 50,
           sizes: ['S', 'M', 'L', 'XL']
@@ -494,17 +496,44 @@ const onFavoriteToggled = (data) => {
   console.log('Favorite toggled:', data)
 }
 
-const onAddedToCart = async (product) => {
+// Fixed cart integration using useCart composable
+const onAddedToCart = async (eventData) => {
   try {
-    await cartService.addItem({ 
-      productId: product._id, 
-      quantity: 1,
-      variant: product.sku || null
-    })
-    console.log('Added to cart:', product)
-    // Could show toast notification
+    const { product, variant } = eventData
+    
+    // Prepare cart data based on the product structure
+    const cartData = {
+      productId: product._id,
+      quantity: 1
+    }
+
+    // Use the variant passed from the event, or fallback to currentVariant
+    const selectedVariant = variant || product.currentVariant
+    
+    if (selectedVariant) {
+      cartData.variantId = selectedVariant._id
+      cartData.variant = {
+        _id: selectedVariant._id,
+        sku: selectedVariant.sku,
+        price: selectedVariant.price,
+        attributes: selectedVariant.attributes || [],
+        images: selectedVariant.images || [],
+        stock: selectedVariant.stock
+      }
+    }
+
+    console.log('Shop.vue - Adding to cart with data:', cartData)
+    await addToCart(cartData)
+    console.log('Shop.vue - Successfully added to cart')
+    
+    // Show success feedback
+    if (navigator.vibrate) {
+      navigator.vibrate(50)
+    }
   } catch (error) {
-    console.error('Failed to add to cart:', error)
+    console.error('Shop.vue - Failed to add to cart:', error)
+    // Could show toast notification
+    alert('Failed to add item to cart. Please try again.')
   }
 }
 
@@ -522,7 +551,7 @@ const closePeek = () => {
 }
 
 const onPeekAddToCart = (product) => {
-  onAddedToCart(product)
+  onAddedToCart({ product })
   closePeek()
 }
 
@@ -680,8 +709,6 @@ onMounted(() => {
   font-size: 0.9rem;
   color: #64748b;
 }
-
-
 
 .products-list.grid-view {
   display: grid;
