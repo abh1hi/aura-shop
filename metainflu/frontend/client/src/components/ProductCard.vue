@@ -7,9 +7,9 @@
   >
     <!-- Image Container -->
     <div class="relative group overflow-hidden">
-      <template v-if="product.images && product.images.length > 1">
+      <template v-if="displayImages && displayImages.length > 1">
         <img
-          v-for="(image, index) in product.images"
+          v-for="(image, index) in displayImages"
           :key="index"
           :src="image.url"
           :alt="product.name"
@@ -31,8 +31,8 @@
         </div>
       </template>
       <img
-        v-else-if="product.images && product.images.length > 0"
-        :src="product.images[0].url"
+        v-else-if="displayImages && displayImages.length > 0"
+        :src="displayImages[0].url"
         :alt="product.name"
         class="w-full h-80 object-cover transition-transform duration-500 group-hover:scale-105"
       />
@@ -61,9 +61,9 @@
         </button>
       </div>
         <!-- Slideshow Dots -->
-      <div v-if="product.images && product.images.length > 1" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+      <div v-if="displayImages && displayImages.length > 1" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
         <span
-          v-for="(image, index) in product.images"
+          v-for="(image, index) in displayImages"
           :key="index"
           class="w-2 h-2 rounded-full transition-colors"
           :class="{ 'bg-white': index === currentImageIndex, 'bg-white/50': index !== currentImageIndex }"
@@ -74,7 +74,13 @@
     <!-- Product Info -->
     <div class="p-4 text-center">
       <h3 class="text-lg font-medium text-gray-900 truncate">{{ product.name }}</h3>
-      <p class="text-sm text-gray-500 mt-1">${{ product.price ? product.price.toFixed(2) : 'N/A' }}</p>
+      <p class="text-sm text-gray-500 mt-1">${{ displayPrice }}</p>
+      <!-- Show variant attributes if available -->
+      <div v-if="product.variantAttributes && product.variantAttributes.length > 0" class="text-xs text-gray-400 mt-1">
+        <span v-for="(attr, index) in product.variantAttributes" :key="index">
+          {{ attr.name }}: {{ attr.value }}<span v-if="index < product.variantAttributes.length - 1">, </span>
+        </span>
+      </div>
     </div>
 
     <!-- Subtle Hover Shadow Glow -->
@@ -86,7 +92,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import cartService from '../services/cartService';
 
@@ -103,15 +109,30 @@ const isAdded = ref(false);
 
 const currentImageIndex = ref(0);
 
+// Computed properties for display values
+const displayPrice = computed(() => {
+  // Prefer variant price first, then product price
+  const price = props.product.currentVariant?.price ?? props.product.price ?? 0;
+  return Number(price).toFixed(2);
+});
+
+const displayImages = computed(() => {
+  // Prefer variant images first, then product images
+  if (props.product.currentVariant?.images && props.product.currentVariant.images.length > 0) {
+    return props.product.currentVariant.images.map(img => ({ url: img }));
+  }
+  return props.product.images || [{ url: 'https://via.placeholder.com/300' }];
+});
+
 const nextImage = () => {
-  if (props.product.images && props.product.images.length > 1) {
-    currentImageIndex.value = (currentImageIndex.value + 1) % props.product.images.length;
+  if (displayImages.value && displayImages.value.length > 1) {
+    currentImageIndex.value = (currentImageIndex.value + 1) % displayImages.value.length;
   }
 };
 
 const prevImage = () => {
-  if (props.product.images && props.product.images.length > 1) {
-    currentImageIndex.value = (currentImageIndex.value - 1 + props.product.images.length) % props.product.images.length;
+  if (displayImages.value && displayImages.value.length > 1) {
+    currentImageIndex.value = (currentImageIndex.value - 1 + displayImages.value.length) % displayImages.value.length;
   }
 };
 
@@ -135,11 +156,23 @@ const handleTouchEnd = () => {
   }
 };
 
-
 const addToCart = async () => {
   isAdding.value = true;
   try {
-    await cartService.addItem({ productId: props.product._id, quantity: 1 });
+    // Build cart data with variant information if available
+    const cartData = {
+      productId: props.product._id,
+      quantity: 1
+    };
+    
+    // Include variant information for products with variants
+    if (props.product.currentVariant) {
+      cartData.variantId = props.product.currentVariant._id;
+      cartData.variant = props.product.currentVariant;
+    }
+    
+    console.log('Adding to cart:', cartData); // Debug log
+    await cartService.addItem(cartData);
     isAdded.value = true;
     setTimeout(() => (isAdded.value = false), 2000);
   } catch (err) {
@@ -150,7 +183,14 @@ const addToCart = async () => {
 };
 
 const buyNow = () => {
-  router.push({ name: 'Checkout', query: { productId: props.product._id } });
+  const queryData = { productId: props.product._id };
+  
+  // Include variant information for checkout if available
+  if (props.product.currentVariant) {
+    queryData.variantId = props.product.currentVariant._id;
+  }
+  
+  router.push({ name: 'Checkout', query: queryData });
 };
 
 const viewDetails = () => {
