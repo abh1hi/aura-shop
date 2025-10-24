@@ -334,7 +334,7 @@ const processingCheckout = ref(false)
 const showActions = ref({})
 const showClearModal = ref(false)
 
-// Pricing helpers that prefer variant price
+// FIXED: Pricing helpers that prefer variant price
 const unitPrice = (item) => {
   if (item?.variant && item.variant.price != null) return Number(item.variant.price) || 0
   if (item?.price != null) return Number(item.price) || 0
@@ -343,20 +343,31 @@ const unitPrice = (item) => {
 }
 
 // Computed properties
-const totalItems = computed(() => cartItems.value.reduce((total, item) => total + (item.quantity || 0), 0))
+const totalItems = computed(() => {
+  return cartItems.value.reduce((total, item) => total + (item.quantity || 0), 0)
+})
 
-const subtotal = computed(() => cartItems.value.reduce((total, item) => total + (unitPrice(item) * (item.quantity || 0)), 0))
+// FIXED: Use unitPrice helper for subtotal calculation
+const subtotal = computed(() => {
+  return cartItems.value.reduce((total, item) => total + (unitPrice(item) * (item.quantity || 0)), 0)
+})
 
 const discountAmount = computed(() => {
   if (!appliedPromo.value) return 0
   return subtotal.value * (appliedPromo.value.discount / 100)
 })
 
-const shipping = computed(() => subtotal.value > 75 ? 0 : 9.99)
+const shipping = computed(() => {
+  return subtotal.value > 75 ? 0 : 9.99
+})
 
-const tax = computed(() => (subtotal.value - discountAmount.value) * 0.08)
+const tax = computed(() => {
+  return (subtotal.value - discountAmount.value) * 0.08
+})
 
-const total = computed(() => subtotal.value - discountAmount.value + shipping.value + tax.value)
+const total = computed(() => {
+  return subtotal.value - discountAmount.value + shipping.value + tax.value
+})
 
 // Touch event handlers
 const onTouchStart = (event) => {
@@ -394,11 +405,12 @@ const handleItemTouchEnd = (event, itemId) => {
   const deltaX = touchEndX - itemTouchStartX.value[itemId]
   const deltaY = touchEndY - itemTouchStartY.value[itemId]
   
+  // Only handle swipe if horizontal movement is significant
   if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
     if (deltaX < 0) {
-      showItemActions(itemId)
+      showItemActions(itemId) // Swipe left = show actions
     } else {
-      hideItemActions(itemId)
+      hideItemActions(itemId) // Swipe right = hide actions
     }
   }
   
@@ -412,23 +424,28 @@ const loadCart = async () => {
   try {
     if (token.value) {
       const cart = await cartService.getCart(token.value)
-      cartItems.value = (cart.items || []).filter(item => item.product).map(item => ({
-        id: item._id,
-        name: item.product.name,
-        // Prefer variant price. Preserve full variant object when present
-        price: Number(item.variant?.price ?? item.product.price ?? 0),
-        originalPrice: item.product.originalPrice ? Number(item.product.originalPrice) : null,
-        quantity: item.quantity,
-        size: item.size,
-        color: item.color,
-        variant: item.variant ? {
-          ...item.variant,
-          price: Number(item.variant.price ?? item.product.price ?? 0)
-        } : null,
-        product: item.product,
-        image: (item.variant?.images && item.variant.images.length > 0)
-          ? item.variant.images[0]
-          : (item.product.images?.[0]?.url || 'https://via.placeholder.com/150x150/f3f4f6/9ca3af?text=No+Image')
+      // FIXED: Preserve variant object and ensure proper price handling
+      cartItems.value = (cart.items || [])
+        .filter(item => item.product)
+        .map(item => ({
+          id: item._id,
+          name: item.product.name,
+          // Keep the original price field for fallback but use unitPrice for display
+          price: Number(item.variant?.price ?? item.product.price ?? 0),
+          originalPrice: item.product.originalPrice ? Number(item.product.originalPrice) : null,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color,
+          // FIXED: Preserve full variant object for proper pricing
+          variant: item.variant ? {
+            ...item.variant,
+            price: Number(item.variant.price ?? item.product.price ?? 0)
+          } : null,
+          product: item.product,
+          // FIXED: Prefer variant image when available
+          image: (item.variant?.images && item.variant.images.length > 0)
+            ? item.variant.images[0]
+            : (item.product.images?.[0]?.url || 'https://via.placeholder.com/150x150/f3f4f6/9ca3af?text=No+Image')
       }))
     }
   } catch (error) {
@@ -529,11 +546,17 @@ const applyPromoCode = async () => {
   }
 }
 
-const removePromo = () => { appliedPromo.value = null }
+const removePromo = () => {
+  appliedPromo.value = null
+}
 
-const clearCart = () => { showClearModal.value = true }
+const clearCart = () => {
+  showClearModal.value = true
+}
 
-const closeClearModal = () => { showClearModal.value = false }
+const closeClearModal = () => {
+  showClearModal.value = false
+}
 
 const confirmClearCart = async () => {
   try {
@@ -542,7 +565,9 @@ const confirmClearCart = async () => {
       cartItems.value = []
       showClearModal.value = false
 
-      if (navigator.vibrate) { navigator.vibrate([50, 30, 50]) }
+      if (navigator.vibrate) {
+        navigator.vibrate([50, 30, 50])
+      }
     }
   } catch (error) {
     console.error('Failed to clear cart:', error)
@@ -562,9 +587,13 @@ const proceedToCheckout = async () => {
   }
 }
 
-const goBack = () => { router.go(-1) }
+const goBack = () => {
+  router.go(-1)
+}
 
-const onSwipe = (event) => { console.log('Swipe detected:', event) }
+const onSwipe = (event) => {
+  console.log('Swipe detected:', event)
+}
 
 const handleImageError = (event) => {
   event.target.src = 'https://via.placeholder.com/150x150/f3f4f6/9ca3af?text=No+Image'
@@ -581,5 +610,761 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Keep existing styles unchanged */
+/* Base Styles */
+.cart-page {
+  min-height: 100vh;
+  background-color: #f8fafc;
+    touch-action: pan-y;
+
+}
+
+/* Mobile-First Cart Styles */
+.mobile-first {
+  padding-bottom: 140px;
+}
+
+.mobile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  z-index: 50;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+}
+
+.back-btn, .clear-cart-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.3s;
+}
+
+.back-btn:hover, .clear-cart-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.clear-cart-btn {
+  color: #ef4444;
+}
+
+.header-title {
+  text-align: center;
+}
+
+.header-title h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.cart-count {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 2px;
+  display: block;
+}
+
+.main-content {
+  margin-top: 70px;
+  padding: 1rem;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  min-height: 50vh;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f4f6;
+  border-top: 3px solid #1a1a1a;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner.small {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 1rem;
+  color: #64748b;
+}
+
+.empty-cart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.empty-content {
+  text-align: center;
+  max-width: 300px;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  color: #cbd5e1;
+  margin-bottom: 1.5rem;
+}
+
+.empty-content h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+}
+
+.empty-content p {
+  color: #64748b;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.shop-now-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #1a1a1a;
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 25px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.shop-now-btn:hover {
+  background: #374151;
+  transform: translateY(-2px);
+}
+
+.cart-items-section {
+  margin-bottom: 2rem;
+}
+
+.cart-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cart-item {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.item-content {
+  display: flex;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.item-image {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.item-attribute {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.item-pricing {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.item-price {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.original-price {
+  font-size: 0.9rem;
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.quantity-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 20px;
+  padding: 4px;
+}
+
+.quantity-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.8rem;
+}
+
+.quantity-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.quantity-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quantity-display {
+  min-width: 2rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.item-total {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.item-actions {
+  position: absolute;
+  right: -120px;
+  top: 0;
+  bottom: 0;
+  width: 120px;
+  background: #ef4444;
+  display: flex;
+  transition: right 0.3s ease;
+}
+
+.item-actions.visible {
+  right: 0;
+}
+
+.remove-btn, .save-btn {
+  flex: 1;
+  border: none;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.remove-btn {
+  background: #ef4444;
+}
+
+.remove-btn:hover {
+  background: #dc2626;
+}
+
+.save-btn {
+  background: #8b5cf6;
+}
+
+.save-btn:hover {
+  background: #7c3aed;
+}
+
+.promo-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.promo-input-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.promo-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.promo-input:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.apply-promo-btn {
+  padding: 0.75rem 1.5rem;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.apply-promo-btn:hover:not(:disabled) {
+  background: #374151;
+}
+
+.apply-promo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.applied-promo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #dcfce7;
+  border-radius: 8px;
+}
+
+.promo-text {
+  color: #166534;
+  font-weight: 600;
+}
+
+.remove-promo-btn {
+  background: none;
+  border: none;
+  color: #166534;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.order-summary {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.summary-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+.summary-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-line.discount {
+  color: #16a34a;
+}
+
+.summary-line.total {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  color: #1a1a1a;
+}
+
+.checkout-section {
+  position: fixed;
+  bottom: 80px;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #e2e8f0;
+  z-index: 40;
+}
+
+.checkout-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.checkout-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.total-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.total-items {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.checkout-btn {
+  background: #1a1a1a;
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+}
+
+.checkout-btn:hover:not(:disabled) {
+  background: #374151;
+  transform: translateY(-2px);
+}
+
+.checkout-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bottom-navigation {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  display: flex;
+  padding: 0.75rem 0;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  z-index: 50;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: #64748b;
+  transition: color 0.3s ease;
+}
+
+.nav-item.active,
+.nav-item:hover {
+  color: #1a1a1a;
+}
+
+.nav-item i {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+}
+
+.nav-item span {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.modal-content h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+}
+
+.modal-content p {
+  color: #64748b;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.cancel-btn, .confirm-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cancel-btn {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.cancel-btn:hover {
+  background: #e2e8f0;
+}
+
+.confirm-btn {
+  background: #ef4444;
+  color: white;
+}
+
+.confirm-btn:hover {
+  background: #dc2626;
+}
+
+/* Desktop Styles */
+.desktop-cart-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.desktop-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.cart-main-content {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+
+.desktop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.desktop-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.cart-items-list-desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.cart-item-desktop {
+  display: grid;
+  grid-template-columns: 100px 1fr auto auto;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.item-image-desktop img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.item-info-desktop .item-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.item-actions-desktop {
+  margin-top: 0.5rem;
+}
+
+.remove-btn-desktop, .save-btn-desktop {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-right: 1rem;
+}
+
+.item-price-desktop {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.order-summary-desktop {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 2rem;
+}
+
+.order-summary-desktop h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.checkout-btn-desktop {
+  width: 100%;
+  background: #1a1a1a;
+  color: white;
+  padding: 1rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-top: 1rem;
+}
+
+.checkout-btn-desktop:hover {
+  background: #374151;
+}
+
+/* Animations */
+.cart-item-enter-active,
+.cart-item-leave-active {
+  transition: all 0.3s ease;
+}
+
+.cart-item-enter-from {
+  opacity: 0;
+  transform: translateX(-100%);
+}
+
+.cart-item-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: all 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+@media (max-width: 767px) {
+  .desktop-view {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-first {
+    display: none;
+  }
+}
 </style>
