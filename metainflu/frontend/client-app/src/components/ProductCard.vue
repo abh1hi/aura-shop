@@ -77,11 +77,11 @@
       <div class="price-rating flex items-baseline justify-between">
         <div class="price">
           <span class="current-price font-bold text-lg text-gray-900">
-            ${{ formatPrice(displayPrice) }}
+            ${{ formatPriceValue(displayPrice) }}
           </span>
           <span v-if="product.originalPrice && product.originalPrice > displayPrice"
                 class="original-price ml-2 text-sm text-gray-400 line-through">
-            ${{ formatPrice(product.originalPrice) }}
+            ${{ formatPriceValue(product.originalPrice) }}
           </span>
           <div v-if="priceRange" class="text-sm text-gray-600 mt-1">
             {{ priceRange }}
@@ -157,6 +157,12 @@ const wasLongPress = ref(false)
 // Use cart composable for better state management
 const { addToCart } = useCart()
 
+// Helper function to format prices
+const formatPriceValue = (price) => {
+  if (!price || price === 0) return '0.00'
+  return parseFloat(price).toFixed(2)
+}
+
 // Variant handling
 const hasVariants = computed(() => {
   return props.product.variants && props.product.variants.length > 0
@@ -205,7 +211,7 @@ const displayPrice = computed(() => {
   return currentVariant.value?.price || props.product.price || 0
 })
 
-// Show price range if variants have different prices
+// Show price range if variants have different prices - FIXED
 const priceRange = computed(() => {
   if (!hasVariants.value || availableVariants.value.length <= 1) return null
   
@@ -217,14 +223,8 @@ const priceRange = computed(() => {
   
   if (minPrice === maxPrice) return null
   
-  return `$${formatPrice(minPrice).value} - $${formatPrice(maxPrice).value}`
-})
-
-const formatPrice = computed(() => {
-  return (price) => {
-    if (!price || price === 0) return '0.00'
-    return parseFloat(price).toFixed(2)
-  }
+  // Fixed: Use the helper function directly instead of the computed property
+  return `$${formatPriceValue(minPrice)} - $${formatPriceValue(maxPrice)}`
 })
 
 const handleLongPress = () => {
