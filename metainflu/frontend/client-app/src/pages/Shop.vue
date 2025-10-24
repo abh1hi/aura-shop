@@ -1,5 +1,11 @@
 <template>
-  <div class="shop-page" :class="{ 'mobile-first': isMobile, 'desktop-view': !isMobile }">
+  <div 
+    class="shop-page" 
+    :class="{ 'mobile-view': isMobile, 'desktop-view': !isMobile }"
+    @touchstart="onTouchStart"
+    @touchmove="onTouchMove"
+    @touchend="onTouchEnd"
+  >
     <!-- Mobile UI -->
     <div v-if="isMobile">
       <main class="main-content">
@@ -55,21 +61,20 @@
             :name="'fade-up'"
             tag="div" 
             :class="[
-              'products-grid',
-              { 'list-view': viewMode === 'list' },
-              { 'grid-view': viewMode === 'grid' }
+              'products-list',
+              { 'grid-view': viewMode === 'grid' },
+              { 'list-view': viewMode === 'list' }
             ]"
           >
             <ProductCard
               v-for="product in displayedProducts"
               :key="product.key"
               :product="product"
-              :mobile="true"
-              :show-rating="true"
               class="product-item"
-              @click="goToProduct(product)"
               @favoriteToggled="onFavoriteToggled"
               @addedToCart="onAddedToCart"
+              @showPeek="handleShowPeek"
+              @hidePeek="closePeek"
             />
           </transition-group>
 
@@ -222,7 +227,7 @@
             <button @click="clearAllFilters" class="clear-filters-btn">Clear Filters</button>
           </div>
 
-          <div v-else class="desktop-products-grid">
+          <div v-else class="flex flex-wrap gap-4">
             <ProductCard
               v-for="product in displayedProducts"
               :key="product.key"
@@ -233,6 +238,7 @@
               @click="goToProduct(product)"
               @favoriteToggled="onFavoriteToggled"
               @addedToCart="onAddedToCart"
+              @showPeek="handleShowPeek"
             />
           </div>
 
@@ -249,6 +255,17 @@
         </main>
       </div>
     </div>
+
+    <!-- Peek Modal -->
+    <ProductPeekModal
+      v-if="showPeek"
+      :product="peekProduct"
+      :is-visible="showPeek"
+      :is-mobile="isMobile"
+      @close="closePeek"
+      @add-to-cart="onPeekAddToCart"
+      @view-product="onPeekViewProduct"
+    />
   </div>
 </template>
 
@@ -256,8 +273,10 @@
 import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
+import ProductPeekModal from '../components/ProductPeekModal.vue'
 import productService from '../services/productService'
 import categoryService from '../services/categoryService'
+import cartService from '../services/cartService'
 
 const router = useRouter()
 
@@ -289,6 +308,14 @@ const showSearch = ref(false)
 const showFilters = ref(false)
 const searchQuery = ref('')
 const searchInput = ref(null)
+const touchStartX = ref(0)
+const touchEndX = ref(0)
+const swipeThreshold = 200
+
+// Peek functionality
+const showPeek = ref(false)
+const peekProduct = ref(null)
+const isPeeking = ref(false)
 
 // Filter options
 const priceRange = ref({ min: null, max: null })
@@ -395,7 +422,7 @@ const fetchInitialData = async () => {
     allProducts.value = productsData
     categories.value = categoriesData
   } catch (err) {
-    
+    console.error('Failed to fetch data:', err)
     error.value = 'Failed to load products. Please try again.'
   } finally {
     isLoading.value = false
@@ -460,16 +487,73 @@ const goToProduct = (product) => {
 }
 
 const onSwipe = (event) => {
-  
+  console.log('Swipe detected:', event)
 }
 
 const onFavoriteToggled = (data) => {
-  
+  console.log('Favorite toggled:', data)
 }
 
-const onAddedToCart = (product) => {
+const onAddedToCart = async (product) => {
+  try {
+    await cartService.addItem({ 
+      productId: product._id, 
+      quantity: 1,
+      variant: product.sku || null
+    })
+    console.log('Added to cart:', product)
+    // Could show toast notification
+  } catch (error) {
+    console.error('Failed to add to cart:', error)
+  }
+}
+
+// Peek functionality methods
+const handleShowPeek = (product) => {
+  peekProduct.value = product
+  showPeek.value = true
+  isPeeking.value = true
+}
+
+const closePeek = () => {
+  showPeek.value = false
+  peekProduct.value = null
+  isPeeking.value = false
+}
+
+const onPeekAddToCart = (product) => {
+  onAddedToCart(product)
+  closePeek()
+}
+
+const onPeekViewProduct = (product) => {
+  goToProduct(product)
+  closePeek()
+}
+
+const onTouchStart = (event) => {
+  if (isPeeking.value) return
+  touchStartX.value = event.touches[0].clientX
+}
+
+const onTouchMove = (event) => {
+  if (isPeeking.value) return
+  touchEndX.value = event.touches[0].clientX
+}
+
+const onTouchEnd = () => {
+  if (isPeeking.value) return
+  if (touchStartX.value === 0 || touchEndX.value === 0) return
+  const swipeDistance = touchEndX.value - touchStartX.value
   
-  // Could show toast notification
+  if (swipeDistance > swipeThreshold) {
+    router.push('/')
+  } else if (swipeDistance < -swipeThreshold) {
+    router.push('/cart')
+  }
+
+  touchStartX.value = 0
+  touchEndX.value = 0
 }
 
 // Watchers
@@ -488,6 +572,7 @@ onMounted(() => {
 .shop-page {
   min-height: 100vh;
   background-color: #f8f9fa;
+  touch-action: pan-y;
 }
 
 /* Mobile-First Design */
@@ -596,18 +681,18 @@ onMounted(() => {
   color: #64748b;
 }
 
-.products-grid {
+
+
+.products-list.grid-view {
   display: grid;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.products-grid.grid-view {
   grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
 }
 
-.products-grid.list-view {
-  grid-template-columns: 1fr;
+.products-list.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .product-item {

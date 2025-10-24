@@ -19,7 +19,7 @@ const getCart = asyncHandler(async (req, res) => {
 // @route   POST /api/cart
 // @access  Private
 const addToCart = asyncHandler(async (req, res) => {
-    const { productId, quantity, size, color } = req.body;
+    const { productId, quantity, variant } = req.body;
 
     const product = await Product.findById(productId);
 
@@ -37,14 +37,13 @@ const addToCart = asyncHandler(async (req, res) => {
     const itemIndex = cart.items.findIndex(
         (item) =>
             item.product.toString() === productId &&
-            item.size === size &&
-            item.color === color
+            item.variant === variant
     );
 
     if (itemIndex > -1) {
         cart.items[itemIndex].quantity += quantity;
     } else {
-        cart.items.push({ product: productId, quantity, size, color });
+        cart.items.push({ product: productId, quantity, variant });
     }
 
     await cart.save();

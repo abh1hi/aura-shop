@@ -1,5 +1,5 @@
 <template>
-  <div class="home-page" :class="{ 'mobile-first': isMobile, 'desktop-view': !isMobile }">
+  <div class="home-page" :class="{ 'mobile-first': isMobile, 'desktop-view': !isMobile }" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd">
     <!-- Mobile UI -->
     <div v-if="isMobile">
       <main class="main-content">
@@ -29,17 +29,32 @@
         <section class="new-arrivals">
           <div class="section-header">
             <h3>New Arrival</h3>
+            <div class="view-toggle">
+              <button :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'"><i class="fas fa-bars"></i></button>
+              <button :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'"><i class="fas fa-th"></i></button>
+            </div>
             <router-link to="/shop" class="see-all">See all</router-link>
           </div>
           
           <div class="products-container">
             <div 
+              v-if="viewMode === 'list'"
               class="products-carousel"
               ref="productsCarousel"
               @scroll="onProductsScroll"
               v-touch:swipe.left="scrollProductsLeft"
               v-touch:swipe.right="scrollProductsRight"
             >
+              <ProductCard
+                v-for="product in newArrivals"
+                :key="product.id"
+                :product="product"
+                :mobile="true"
+                class="product-card-mobile"
+                @click="goToProduct(product)"
+              />
+            </div>
+            <div v-else class="products-grid">
               <ProductCard
                 v-for="product in newArrivals"
                 :key="product.id"
@@ -68,10 +83,23 @@
         <section class="trending-products">
           <div class="section-header">
             <h3>Trending Now</h3>
+            <div class="view-toggle">
+              <button :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'"><i class="fas fa-bars"></i></button>
+              <button :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'"><i class="fas fa-th"></i></button>
+            </div>
             <router-link to="/shop?sort=trending" class="see-all">View all</router-link>
           </div>
           
-          <div class="trending-grid">
+          <div v-if="viewMode === 'list'" class="products-carousel">
+            <ProductCard
+              v-for="product in trendingProducts"
+              :key="product.id"
+              :product="product"
+              :mobile="true"
+              class="trending-card"
+            />
+          </div>
+          <div v-else class="trending-grid">
             <ProductCard
               v-for="product in trendingProducts"
               :key="product.id"
@@ -181,6 +209,11 @@ const currentBannerIndex = ref(0)
 const cartItems = ref(0)
 const tabsContainer = ref(null)
 const productsCarousel = ref(null)
+const touchStartX = ref(0);
+const touchEndX = ref(0);
+const swipeThreshold = 200; // Minimum swipe distance
+const viewMode = ref('list'); // Add this line
+
 
 // Category tabs
 const categoryTabs = ref(['Limited', 'Recommended', 'New in', 'Trendy'])
@@ -296,6 +329,25 @@ const onSwipe = (event) => {
   
 }
 
+const onTouchStart = (event) => {
+      touchStartX.value = event.touches[0].clientX;
+    };
+
+    const onTouchMove = (event) => {
+      touchEndX.value = event.touches[0].clientX;
+    };
+
+    const onTouchEnd = () => {
+      if (touchStartX.value === 0 || touchEndX.value === 0) return;
+      const swipeDistance = touchStartX.value - touchEndX.value;
+      if (swipeDistance > swipeThreshold) {
+        router.push('/shop');
+      }
+      // Reset touch positions
+      touchStartX.value = 0;
+      touchEndX.value = 0;
+    };
+
 // Fetch products
 const fetchProducts = async () => {
   try {
@@ -345,6 +397,7 @@ onUnmounted(() => {
 .home-page {
   min-height: 100vh;
   background-color: #f8f9fa;
+  touch-action: pan-y;
 }
 
 /* Mobile-First Design */
@@ -464,6 +517,23 @@ onUnmounted(() => {
   font-size: 0.9rem;
 }
 
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.view-toggle button {
+  background: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+}
+
+.view-toggle button.active {
+  background: #e2e8f0;
+}
+
 .new-arrivals {
   margin-bottom: 2rem;
 }
@@ -553,6 +623,16 @@ onUnmounted(() => {
 
 .trending-products {
   margin-bottom: 2rem;
+}
+
+.view-toggle button.active {
+  background: #e2e8f0;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
 }
 
 .trending-grid {

@@ -1,24 +1,12 @@
 <template>
-  <div class="cart-page" :class="{ 'mobile-first': isMobile, 'desktop-view': !isMobile }">
-    <!-- Mobile UI -->
+  <div 
+    class="shop-page" 
+    :class="{ 'mobile-view': isMobile, 'desktop-view': !isMobile }"
+    @touchstart="onTouchStart"
+    @touchmove="onTouchMove"
+    @touchend="onTouchEnd"
+  >    <!-- Mobile UI -->
     <div v-if="isMobile">
-      <header class="mobile-header">
-        <div class="header-content">
-          <button class="back-btn" @click="goBack">
-            <i class="fas fa-arrow-left"></i>
-          </button>
-          <div class="header-title">
-            <h1>Cart</h1>
-            <span class="cart-count" v-if="cartItems.length">{{ cartItems.length }} item{{ cartItems.length !== 1 ? 's' : '' }}</span>
-          </div>
-          <div class="header-actions">
-            <button v-if="cartItems.length" class="clear-cart-btn" @click="clearCart">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        </div>
-      </header>
-
       <main class="main-content">
         <div v-if="isLoading" class="loading-container">
           <div class="loading-spinner"></div>
@@ -327,6 +315,9 @@ const updatingItem = ref(null)
 const processingCheckout = ref(false)
 const showActions = ref({})
 const showClearModal = ref(false)
+const touchStartX = ref(0);
+const touchEndX = ref(0);
+const swipeThreshold = 50;
 
 // Computed properties
 const totalItems = computed(() => {
@@ -512,6 +503,28 @@ const proceedToCheckout = async () => {
   }
 }
 
+const onTouchStart = (event) => {
+  touchStartX.value = event.touches[0].clientX;
+};
+
+const onTouchMove = (event) => {
+  touchEndX.value = event.touches[0].clientX;
+};
+
+const onTouchEnd = () => {
+  if (touchStartX.value === 0 || touchEndX.value === 0) return;
+  const swipeDistance = touchEndX.value - touchStartX.value;
+  
+  if (swipeDistance > swipeThreshold) {
+    router.push('/shop');
+  } else if (swipeDistance < -swipeThreshold) {
+    router.push('/account');
+  }
+
+  touchStartX.value = 0;
+  touchEndX.value = 0;
+};
+
 const goBack = () => {
   router.go(-1)
 }
@@ -539,6 +552,8 @@ onMounted(() => {
 .cart-page {
   min-height: 100vh;
   background-color: #f8fafc;
+    touch-action: pan-y;
+
 }
 
 /* Mobile-First Cart Styles */

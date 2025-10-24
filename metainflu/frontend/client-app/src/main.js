@@ -4,8 +4,8 @@ import { createApp, reactive } from 'vue'
 import App from './App.vue'
 import './index.css'
 
-// Touch gesture library
-import Vue3TouchEvents from 'vue3-touch-events'
+// Import the long press directive
+import longPress from './directives/longPress'
 
 // Global state for user authentication (check localStorage safely)
 let savedUser = null
@@ -26,15 +26,8 @@ import router from './router'
 // Create the Vue application instance
 const app = createApp(App)
 
-// Use plugins
-app.use(Vue3TouchEvents, {
-  disableClick: false,
-  touchClass: '',
-  tapTolerance: 10,
-  touchHoldTolerance: 400,
-  swipeTolerance: 30,
-  longTapTimeInterval: 400
-})
+// Register the long-press directive
+app.directive('long-press', longPress)
 
 // Use router and mount when ready
 app.use(router)
