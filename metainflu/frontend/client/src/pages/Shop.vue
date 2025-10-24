@@ -153,21 +153,41 @@ const productsWithVariants = computed(() => {
   allProducts.value.forEach(product => {
     if (product.variants && product.variants.length > 0) {
       product.variants.forEach(variant => {
-        let imageUrl = 'https://via.placeholder.com/300';
-        if (variant.images && variant.images.length > 0) {
-          imageUrl = variant.images[0];
-        } else if (product.images && product.images.length > 0) {
-          imageUrl = product.images[0].url;
-        }
-
+        // Build each "card product" with variant-specific fields
         expanded.push({
-          ...product,
-          key: `${product._id}-${variant.sku || variant._id}`,
-          price: variant.price,
-          stock: variant.stock,
+          // Base product identity
+          _id: product._id,
+          key: `${product._id}-${variant._id || variant.sku || variant.price || ''}`,
+          name: product.name,
+          description: product.description,
+          categories: product.categories || [],
+          createdAt: product.createdAt,
+          
+          // Variant-first fields used by ProductCard
+          price: Number(variant.price ?? product.price ?? 0),
+          stock: Number(variant.stock ?? 0),
+          images: Array.isArray(variant.images) && variant.images.length > 0
+            ? variant.images.map(img => ({ url: img }))
+            : (Array.isArray(product.images) && product.images.length > 0
+              ? product.images.map(img => ({ url: img.url || img }))
+              : [{ url: 'https://via.placeholder.com/300' }]),
+          
+          // Extra fields for downstream usage
           sku: variant.sku,
-          images: [{ url: imageUrl }],
-          variantAttributes: variant.attributes,
+          variantAttributes: Array.isArray(variant.attributes) ? variant.attributes : [],
+          currentVariant: {
+            _id: variant._id,
+            sku: variant.sku,
+            price: variant.price,
+            stock: variant.stock,
+            images: variant.images || [],
+            attributes: Array.isArray(variant.attributes) ? variant.attributes : []
+          },
+          
+          // Cosmetic/demo fields if needed
+          rating: 4.7,
+          reviews: 120,
+          sizes: ['S', 'M', 'L', 'XL']
         });
       });
     } else {
@@ -175,8 +195,16 @@ const productsWithVariants = computed(() => {
       expanded.push({
         ...product,
         key: product._id,
-        price: product.price || 0,
-        images: product.images,
+        price: Number(product.price || 0),
+        stock: Number(product.stock || 0),
+        images: Array.isArray(product.images) && product.images.length > 0
+          ? product.images.map(img => ({ url: img.url || img }))
+          : [{ url: 'https://via.placeholder.com/300' }],
+        currentVariant: null, // No variant for base products
+        variantAttributes: [],
+        rating: 4.7,
+        reviews: 120,
+        sizes: ['S', 'M', 'L', 'XL']
       });
     }
   });
