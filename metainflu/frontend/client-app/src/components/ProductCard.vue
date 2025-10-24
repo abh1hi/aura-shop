@@ -33,7 +33,7 @@
       <button
         v-if="mobile"
         class="quick-add-btn absolute bottom-3 right-3 w-9 h-9 rounded-full bg-gray-900 text-white flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 z-10 hover:bg-gray-700"
-        @click.stop="addToCart"
+        @click.stop="handleAddToCart"
         :disabled="isAdding"
       >
         <i v-if="!isAdding" class="fas fa-plus"></i>
@@ -89,7 +89,7 @@
       class="cart-overlay absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
     >
       <button
-        @click.stop="addToCart"
+        @click.stop="handleAddToCart"
         :disabled="isAdding"
         class="add-to-cart-btn text-white text-base font-bold px-6 py-3 rounded-full bg-white/20 backdrop-blur-lg hover:bg-white/30 transition-colors duration-300 disabled:opacity-50"
       >
@@ -102,7 +102,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import cartService from '../services/cartService'
+import { useCart } from '../composables/useCart'
 
 const props = defineProps({
   product: {
@@ -125,6 +125,9 @@ const router = useRouter()
 const isAdding = ref(false)
 const isFavorite = ref(false)
 const wasLongPress = ref(false)
+
+// Use cart composable for better state management
+const { addToCart } = useCart()
 
 const formatPrice = computed(() => {
   return (price) => {
@@ -162,14 +165,13 @@ const viewDetails = () => {
   })
 }
 
-const addToCart = async () => {
+const handleAddToCart = async () => {
   if (isAdding.value) return
 
   isAdding.value = true
   try {
-    // Fixed: Changed from cartService.addItem to cartService.addToCart
-    // This was the main issue causing the cart functionality to fail
-    const result = await cartService.addToCart({
+    // Use the cart composable which automatically updates global cart state
+    const result = await addToCart({
       productId: props.product._id,
       quantity: 1,
       variant: props.product.sku || null
@@ -177,7 +179,7 @@ const addToCart = async () => {
 
     console.log('Successfully added to cart:', result)
     
-    // Emit success event
+    // Emit success event for parent components
     emit('addedToCart', props.product)
 
     // Haptic feedback for mobile devices
@@ -185,15 +187,14 @@ const addToCart = async () => {
       navigator.vibrate(50)
     }
 
-    // Optional: You can add a success toast notification here
-    // showSuccessToast('Item added to cart!')
+    // Show success feedback (you can customize this)
+    showSuccessMessage('Added to cart!')
 
   } catch (error) {
     console.error('Failed to add to cart:', error)
     
     // Show error feedback to user
-    // You can replace this alert with a more elegant toast notification
-    alert('Failed to add item to cart. Please try again.')
+    showErrorMessage('Failed to add item to cart. Please try again.')
   } finally {
     isAdding.value = false
   }
@@ -210,6 +211,33 @@ const toggleFavorite = () => {
 
 const handleImageError = (event) => {
   event.target.src = 'https://via.placeholder.com/300x300/f3f4f6/9ca3af?text=No+Image'
+}
+
+// Simple toast notification functions
+const showSuccessMessage = (message) => {
+  // You can replace this with a proper toast library like vue-toastification
+  const toast = document.createElement('div')
+  toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in'
+  toast.textContent = message
+  document.body.appendChild(toast)
+  
+  setTimeout(() => {
+    toast.classList.add('animate-fade-out')
+    setTimeout(() => document.body.removeChild(toast), 300)
+  }, 2000)
+}
+
+const showErrorMessage = (message) => {
+  // You can replace this with a proper toast library like vue-toastification
+  const toast = document.createElement('div')
+  toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in'
+  toast.textContent = message
+  document.body.appendChild(toast)
+  
+  setTimeout(() => {
+    toast.classList.add('animate-fade-out')
+    setTimeout(() => document.body.removeChild(toast), 300)
+  }, 3000)
 }
 </script>
 
@@ -305,5 +333,36 @@ const handleImageError = (event) => {
   .mobile-card .image-container {
     height: 280px;
   }
+}
+
+/* Toast animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.3s ease-out;
 }
 </style>
