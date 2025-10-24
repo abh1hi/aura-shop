@@ -11,15 +11,8 @@
     <!-- Product Image Container -->
     <div class="image-container relative overflow-hidden rounded-t-lg">
       <img
-        v-if="currentVariant?.images?.length > 0"
-        :src="currentVariant.images[0]"
-        :alt="product.name"
-        class="product-image w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
-        @error="handleImageError"
-      />
-      <img
-        v-else-if="product.images && product.images.length > 0"
-        :src="product.images[0].url || product.images[0]"
+        v-if="displayImages && displayImages.length > 0"
+        :src="displayImages[0].url"
         :alt="product.name"
         class="product-image w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
         @error="handleImageError"
@@ -60,8 +53,8 @@
       <div v-if="!isInStock" class="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
         Out of Stock
       </div>
-      <div v-else-if="currentVariant?.stock <= 5" class="absolute top-3 left-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-        {{ currentVariant.stock }} left
+      <div v-else-if="displayStock && displayStock <= 5" class="absolute top-3 left-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+        {{ displayStock }} left
       </div>
     </div>
 
@@ -73,19 +66,23 @@
         </h3>
       </div>
 
+      <!-- Variant Attributes if available -->
+      <div v-if="product.variantAttributes && product.variantAttributes.length > 0" class="variant-info text-xs text-gray-500 mb-2">
+        <span v-for="(attr, index) in product.variantAttributes" :key="index">
+          {{ attr.name }}: {{ attr.value }}<span v-if="index < product.variantAttributes.length - 1">, </span>
+        </span>
+      </div>
+
       <!-- Price and Rating -->
       <div class="price-rating flex items-baseline justify-between">
         <div class="price">
           <span class="current-price font-bold text-lg text-gray-900">
-            ${{ formatPriceValue(displayPrice) }}
+            ${{ displayPrice }}
           </span>
-          <span v-if="product.originalPrice && product.originalPrice > displayPrice"
+          <span v-if="product.originalPrice && product.originalPrice > parseFloat(displayPrice)"
                 class="original-price ml-2 text-sm text-gray-400 line-through">
             ${{ formatPriceValue(product.originalPrice) }}
           </span>
-          <div v-if="priceRange" class="text-sm text-gray-600 mt-1">
-            {{ priceRange }}
-          </div>
         </div>
 
         <!-- Rating Stars -->
@@ -95,11 +92,6 @@
           </div>
           <span class="review-count text-sm text-gray-500">({{ product.reviews || 0 }})</span>
         </div>
-      </div>
-
-      <!-- Variant Options Preview for Mobile -->
-      <div v-if="mobile && hasVariants" class="variants flex items-center gap-2 mt-3">
-        <span class="text-xs text-gray-500">Available in {{ availableVariantsCount }} variants</span>
       </div>
     </div>
 
@@ -163,68 +155,40 @@ const formatPriceValue = (price) => {
   return parseFloat(price).toFixed(2)
 }
 
-// Variant handling
+// Computed properties for display values that prefer currentVariant data
+const displayPrice = computed(() => {
+  // Prefer currentVariant price first, then product price
+  const price = props.product.currentVariant?.price ?? props.product.price ?? 0
+  return formatPriceValue(price)
+})
+
+const displayImages = computed(() => {
+  // Prefer currentVariant images first, then product images
+  if (props.product.currentVariant?.images && props.product.currentVariant.images.length > 0) {
+    return props.product.currentVariant.images.map(img => ({ url: img }))
+  }
+  return props.product.images || [{ url: 'https://via.placeholder.com/300' }]
+})
+
+const displayStock = computed(() => {
+  return props.product.currentVariant?.stock ?? props.product.stock ?? 0
+})
+
+// Variant handling - updated for the new data structure
 const hasVariants = computed(() => {
-  return props.product.variants && props.product.variants.length > 0
+  // Since Shop.vue now flattens variants, check if this is a variant product
+  return !!props.product.currentVariant
 })
 
-const availableVariants = computed(() => {
-  if (!hasVariants.value) return []
-  return props.product.variants.filter(variant => variant.status === 'active' && variant.stock > 0)
-})
-
-const availableVariantsCount = computed(() => availableVariants.value.length)
-
-// Use the first available variant as default, or create a default variant
-const currentVariant = computed(() => {
-  if (availableVariants.value.length > 0) {
-    return availableVariants.value[0]
-  }
-  // Return a default variant structure if no variants exist
-  return {
-    _id: null,
-    sku: props.product.sku || null,
-    price: props.product.price || 0,
-    stock: props.product.stock || 0,
-    attributes: [],
-    images: props.product.images || [],
-    status: 'active'
-  }
-})
-
-// Check if variant selection is needed (multiple variants with different attributes)
 const needsVariantSelection = computed(() => {
-  if (!hasVariants.value) return false
-  if (availableVariants.value.length <= 1) return false
-  
-  // Check if variants have different attributes that would require selection
-  return availableVariants.value.some(variant => 
-    variant.attributes && variant.attributes.length > 0
-  )
+  // For the flattened structure, we don't need variant selection in ProductCard
+  // Each card represents a single variant already
+  return false
 })
 
 const isInStock = computed(() => {
-  return currentVariant.value && currentVariant.value.stock > 0
-})
-
-const displayPrice = computed(() => {
-  return currentVariant.value?.price || props.product.price || 0
-})
-
-// Show price range if variants have different prices - FIXED
-const priceRange = computed(() => {
-  if (!hasVariants.value || availableVariants.value.length <= 1) return null
-  
-  const prices = availableVariants.value.map(v => v.price).filter(p => p != null)
-  if (prices.length === 0) return null
-  
-  const minPrice = Math.min(...prices)
-  const maxPrice = Math.max(...prices)
-  
-  if (minPrice === maxPrice) return null
-  
-  // Fixed: Use the helper function directly instead of the computed property
-  return `$${formatPriceValue(minPrice)} - $${formatPriceValue(maxPrice)}`
+  const stock = displayStock.value
+  return stock > 0
 })
 
 const handleLongPress = () => {
@@ -259,47 +223,27 @@ const viewDetails = () => {
 const handleAddToCart = async () => {
   if (isAdding.value || !isInStock.value) return
 
-  // If variant selection is needed, redirect to product detail page
-  if (needsVariantSelection.value) {
-    viewDetails()
-    return
-  }
-
   isAdding.value = true
   try {
-    // Prepare cart data with proper variant information
+    // Build cart data with variant information if available
     const cartData = {
       productId: props.product._id,
       quantity: 1
     }
-
-    // Add variant information if available
-    if (currentVariant.value && currentVariant.value._id) {
-      cartData.variantId = currentVariant.value._id
-      cartData.variant = {
-        _id: currentVariant.value._id,
-        sku: currentVariant.value.sku,
-        price: currentVariant.value.price,
-        attributes: currentVariant.value.attributes || [],
-        images: currentVariant.value.images || []
-      }
-    } else if (currentVariant.value?.sku) {
-      // Fallback for products without proper variants structure
-      cartData.variant = {
-        sku: currentVariant.value.sku,
-        price: currentVariant.value.price,
-        attributes: [],
-        images: props.product.images || []
-      }
+    
+    // Include variant information for products with variants
+    if (props.product.currentVariant) {
+      cartData.variantId = props.product.currentVariant._id
+      cartData.variant = props.product.currentVariant
     }
-
-    console.log('Adding to cart with data:', cartData)
+    
+    console.log('ProductCard - Adding to cart:', cartData)
     const result = await addToCart(cartData)
 
-    console.log('Successfully added to cart:', result)
+    console.log('ProductCard - Successfully added to cart:', result)
     
     // Emit success event for parent components
-    emit('addedToCart', { product: props.product, variant: currentVariant.value })
+    emit('addedToCart', { product: props.product, variant: props.product.currentVariant })
 
     // Haptic feedback for mobile devices
     if (navigator.vibrate) {
@@ -310,7 +254,7 @@ const handleAddToCart = async () => {
     showSuccessMessage('Added to cart!')
 
   } catch (error) {
-    console.error('Failed to add to cart:', error)
+    console.error('ProductCard - Failed to add to cart:', error)
     
     // Show error feedback to user
     showErrorMessage('Failed to add item to cart. Please try again.')
