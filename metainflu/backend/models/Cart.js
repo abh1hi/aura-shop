@@ -16,15 +16,20 @@ const cartSchema = new mongoose.Schema({
         type: Number,
         default: 1,
       },
+      // Legacy fields for backward compatibility
       size: {
         type: String,
       },
       color: {
         type: String,
       },
-      variant: {
-        type: String,
+      // Enhanced variant support
+      variantId: {
+        type: String, // Can be ObjectId or SKU
       },
+      variant: {
+        type: mongoose.Schema.Types.Mixed, // Flexible object to store variant data
+      }
     },
   ],
 });
