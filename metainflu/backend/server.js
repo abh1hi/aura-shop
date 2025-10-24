@@ -36,6 +36,8 @@ const corsOptions = {
     'http://localhost:5174',
     'http://127.0.0.1:5174',
     'https://3czzqk3l-5174.use2.devtunnels.ms',
+    'https://3czzqk3l-5173.use2.devtunnels.ms',
+    'https://automatic-sniffle-976j6j599wgvh9vqw-5173.app.github.dev',
     
     // Capacitor Android/iOS - localhost with https
     'https://localhost',

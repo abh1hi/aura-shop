@@ -1,149 +1,253 @@
 <template>
-  <div class="cart-page mobile-first" v-touch:swipe="onSwipe">
-    <!-- Mobile Header -->
-    <header class="mobile-header">
-      <div class="header-content">
-        <button class="back-btn" @click="goBack">
-          <i class="fas fa-arrow-left"></i>
-        </button>
-        <div class="header-title">
-          <h1>Cart</h1>
-          <span class="cart-count" v-if="cartItems.length">{{ cartItems.length }} item{{ cartItems.length !== 1 ? 's' : '' }}</span>
+  <div class="cart-page" :class="{ 'mobile-first': isMobile, 'desktop-view': !isMobile }">
+    <!-- Mobile UI -->
+    <div v-if="isMobile">
+      <header class="mobile-header">
+        <div class="header-content">
+          <button class="back-btn" @click="goBack">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <div class="header-title">
+            <h1>Cart</h1>
+            <span class="cart-count" v-if="cartItems.length">{{ cartItems.length }} item{{ cartItems.length !== 1 ? 's' : '' }}</span>
+          </div>
+          <div class="header-actions">
+            <button v-if="cartItems.length" class="clear-cart-btn" @click="clearCart">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
         </div>
-        <div class="header-actions">
-          <button v-if="cartItems.length" class="clear-cart-btn" @click="clearCart">
-            <i class="fas fa-trash"></i>
+      </header>
+
+      <main class="main-content">
+        <div v-if="isLoading" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">Loading cart...</p>
+        </div>
+
+        <div v-else-if="cartItems.length === 0" class="empty-cart">
+          <div class="empty-content">
+            <i class="fas fa-shopping-bag empty-icon"></i>
+            <h3>Your cart is empty</h3>
+            <p>Looks like you haven't added anything to your cart yet</p>
+            <router-link to="/shop" class="shop-now-btn">
+              <i class="fas fa-plus"></i>
+              <span>Start Shopping</span>
+            </router-link>
+          </div>
+        </div>
+
+        <div v-else class="cart-content">
+          <section class="cart-items-section">
+            <transition-group name="cart-item" tag="div" class="cart-items-list">
+              <div 
+                v-for="item in cartItems" 
+                :key="item.id"
+                class="cart-item"
+                v-touch:swipe.left="() => showItemActions(item.id)"
+                v-touch:swipe.right="() => hideItemActions(item.id)"
+              >
+                <div class="item-content">
+                  <div class="item-image">
+                    <img :src="item.image" :alt="item.name" @error="handleImageError"/>
+                  </div>
+                  <div class="item-info">
+                    <h3 class="item-name">{{ item.name }}</h3>
+                    <div class="item-details">
+                      <span v-if="item.size" class="item-attribute">Size: {{ item.size }}</span>
+                      <span v-if="item.color" class="item-attribute">Color: {{ item.color }}</span>
+                    </div>
+                    <div class="item-pricing">
+                      <span class="item-price">${{ item.price.toFixed(2) }}</span>
+                      <span v-if="item.originalPrice && item.originalPrice > item.price" class="original-price">
+                        ${{ item.originalPrice.toFixed(2) }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="quantity-section">
+                    <div class="quantity-controls">
+                      <button @click="decreaseQuantity(item.id)" :disabled="item.quantity <= 1 || updatingItem === item.id" class="quantity-btn">
+                        <i class="fas fa-minus"></i>
+                      </button>
+                      <span class="quantity-display">{{ item.quantity }}</span>
+                      <button @click="increaseQuantity(item.id)" :disabled="updatingItem === item.id" class="quantity-btn">
+                        <i class="fas fa-plus"></i>
+                      </button>
+                    </div>
+                    <div class="item-total">
+                      ${{ (item.price * item.quantity).toFixed(2) }}
+                    </div>
+                  </div>
+                </div>
+                <div :class="['item-actions', { visible: showActions[item.id] }]">
+                  <button @click="removeItem(item.id)" class="remove-btn">
+                    <i class="fas fa-trash"></i>
+                    <span>Remove</span>
+                  </button>
+                  <button @click="saveForLater(item.id)" class="save-btn">
+                    <i class="fas fa-heart"></i>
+                    <span>Save</span>
+                  </button>
+                </div>
+              </div>
+            </transition-group>
+          </section>
+
+          <section class="promo-section">
+            <div class="promo-input-container">
+              <input v-model="promoCode" type="text" placeholder="Promo code" class="promo-input"/>
+              <button @click="applyPromoCode" :disabled="!promoCode || applyingPromo" class="apply-promo-btn">
+                {{ applyingPromo ? 'Applying...' : 'Apply' }}
+              </button>
+            </div>
+            <div v-if="appliedPromo" class="applied-promo">
+              <span class="promo-text">{{ appliedPromo.code }} applied</span>
+              <button @click="removePromo" class="remove-promo-btn">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </section>
+
+          <section class="order-summary">
+            <h3 class="summary-title">Order Summary</h3>
+            <div class="summary-breakdown">
+              <div class="summary-line">
+                <span>Subtotal ({{ totalItems }} items)</span>
+                <span>${{ subtotal.toFixed(2) }}</span>
+              </div>
+              <div v-if="appliedPromo" class="summary-line discount">
+                <span>Discount ({{ appliedPromo.code }})</span>
+                <span>-${{ discountAmount.toFixed(2) }}</span>
+              </div>
+              <div class="summary-line">
+                <span>Shipping</span>
+                <span>{{ shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}` }}</span>
+              </div>
+              <div class="summary-line">
+                <span>Tax</span>
+                <span>${{ tax.toFixed(2) }}</span>
+              </div>
+              <div class="summary-line total">
+                <span>Total</span>
+                <span>${{ total.toFixed(2) }}</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <div v-if="cartItems.length" class="checkout-section">
+        <div class="checkout-container">
+          <div class="checkout-info">
+            <div class="total-amount">${{ total.toFixed(2) }}</div>
+            <div class="total-items">{{ totalItems }} items</div>
+          </div>
+          <button @click="proceedToCheckout" :disabled="processingCheckout" class="checkout-btn">
+            <span v-if="!processingCheckout">Checkout</span>
+            <div v-else class="loading-spinner small"></div>
           </button>
         </div>
       </div>
-    </header>
 
-    <main class="main-content">
-      <!-- Loading State -->
-      <div v-if="isLoading" class="loading-container">
-        <div class="loading-spinner"></div>
-        <p class="loading-text">Loading cart...</p>
-      </div>
+      <nav class="bottom-navigation">
+        <router-link to="/" class="nav-item">
+          <i class="fas fa-home"></i>
+          <span>Home</span>
+        </router-link>
+        <router-link to="/shop" class="nav-item">
+          <i class="fas fa-search"></i>
+          <span>Shop</span>
+        </router-link>
+        <router-link to="/cart" class="nav-item active">
+          <i class="fas fa-shopping-bag"></i>
+          <span>Cart</span>
+        </router-link>
+        <router-link to="/account" class="nav-item">
+          <i class="fas fa-user"></i>
+          <span>Account</span>
+        </router-link>
+      </nav>
 
-      <!-- Empty Cart -->
-      <div v-else-if="cartItems.length === 0" class="empty-cart">
-        <div class="empty-content">
-          <i class="fas fa-shopping-bag empty-icon"></i>
-          <h3>Your cart is empty</h3>
-          <p>Looks like you haven't added anything to your cart yet</p>
-          <router-link to="/shop" class="shop-now-btn">
-            <i class="fas fa-plus"></i>
-            <span>Start Shopping</span>
-          </router-link>
+      <transition name="modal">
+        <div v-if="showClearModal" class="modal-overlay" @click="closeClearModal">
+          <div class="modal-content" @click.stop>
+            <h3>Clear Cart?</h3>
+            <p>Are you sure you want to remove all items from your cart?</p>
+            <div class="modal-actions">
+              <button @click="closeClearModal" class="cancel-btn">Cancel</button>
+              <button @click="confirmClearCart" class="confirm-btn">Clear Cart</button>
+            </div>
+          </div>
         </div>
-      </div>
+      </transition>
+    </div>
 
-      <!-- Cart Items -->
-      <div v-else class="cart-content">
-        <!-- Cart Items List -->
-        <section class="cart-items-section">
-          <transition-group name="cart-item" tag="div" class="cart-items-list">
-            <div 
-              v-for="item in cartItems" 
-              :key="item.id"
-              class="cart-item"
-              v-touch:swipe.left="() => showItemActions(item.id)"
-              v-touch:swipe.right="() => hideItemActions(item.id)"
-            >
-              <div class="item-content">
-                <!-- Product Image -->
-                <div class="item-image">
-                  <img 
-                    :src="item.image" 
-                    :alt="item.name" 
-                    @error="handleImageError"
-                  />
+    <!-- Desktop UI -->
+    <div v-else class="desktop-cart-page">
+      <div class="desktop-container">
+        <div class="cart-main-content">
+          <header class="desktop-header">
+            <h1>Shopping Cart</h1>
+            <button v-if="cartItems.length" class="clear-cart-btn" @click="clearCart">
+              <i class="fas fa-trash"></i> Clear Cart
+            </button>
+          </header>
+
+          <div v-if="isLoading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Loading cart...</p>
+          </div>
+
+          <div v-else-if="cartItems.length === 0" class="empty-cart">
+            <div class="empty-content">
+              <i class="fas fa-shopping-bag empty-icon"></i>
+              <h3>Your cart is empty</h3>
+              <p>Looks like you haven't added anything to your cart yet</p>
+              <router-link to="/shop" class="shop-now-btn">
+                <i class="fas fa-plus"></i>
+                <span>Start Shopping</span>
+              </router-link>
+            </div>
+          </div>
+
+          <div v-else>
+            <div class="cart-items-list-desktop">
+              <div v-for="item in cartItems" :key="item.id" class="cart-item-desktop">
+                <div class="item-image-desktop">
+                  <img :src="item.image" :alt="item.name" @error="handleImageError"/>
                 </div>
-
-                <!-- Product Info -->
-                <div class="item-info">
+                <div class="item-info-desktop">
                   <h3 class="item-name">{{ item.name }}</h3>
                   <div class="item-details">
                     <span v-if="item.size" class="item-attribute">Size: {{ item.size }}</span>
                     <span v-if="item.color" class="item-attribute">Color: {{ item.color }}</span>
                   </div>
-                  <div class="item-pricing">
-                    <span class="item-price">${{ item.price.toFixed(2) }}</span>
-                    <span v-if="item.originalPrice && item.originalPrice > item.price" 
-                          class="original-price">
-                      ${{ item.originalPrice.toFixed(2) }}
-                    </span>
+                  <div class="item-actions-desktop">
+                    <button @click="removeItem(item.id)" class="remove-btn-desktop">Remove</button>
+                    <button @click="saveForLater(item.id)" class="save-btn-desktop">Save for later</button>
                   </div>
                 </div>
-
-                <!-- Quantity Controls -->
-                <div class="quantity-section">
+                <div class="quantity-section-desktop">
                   <div class="quantity-controls">
-                    <button 
-                      @click="decreaseQuantity(item.id)" 
-                      :disabled="item.quantity <= 1 || updatingItem === item.id"
-                      class="quantity-btn"
-                    >
+                    <button @click="decreaseQuantity(item.id)" :disabled="item.quantity <= 1 || updatingItem === item.id" class="quantity-btn">
                       <i class="fas fa-minus"></i>
                     </button>
                     <span class="quantity-display">{{ item.quantity }}</span>
-                    <button 
-                      @click="increaseQuantity(item.id)" 
-                      :disabled="updatingItem === item.id"
-                      class="quantity-btn"
-                    >
+                    <button @click="increaseQuantity(item.id)" :disabled="updatingItem === item.id" class="quantity-btn">
                       <i class="fas fa-plus"></i>
                     </button>
                   </div>
-                  <div class="item-total">
-                    ${{ (item.price * item.quantity).toFixed(2) }}
-                  </div>
+                </div>
+                <div class="item-price-desktop">
+                  <span>${{ (item.price * item.quantity).toFixed(2) }}</span>
                 </div>
               </div>
-
-              <!-- Item Actions (Swipe to reveal) -->
-              <div :class="['item-actions', { visible: showActions[item.id] }]">
-                <button @click="removeItem(item.id)" class="remove-btn">
-                  <i class="fas fa-trash"></i>
-                  <span>Remove</span>
-                </button>
-                <button @click="saveForLater(item.id)" class="save-btn">
-                  <i class="fas fa-heart"></i>
-                  <span>Save</span>
-                </button>
-              </div>
             </div>
-          </transition-group>
-        </section>
-
-        <!-- Promo Code Section -->
-        <section class="promo-section">
-          <div class="promo-input-container">
-            <input 
-              v-model="promoCode" 
-              type="text" 
-              placeholder="Promo code"
-              class="promo-input"
-            />
-            <button 
-              @click="applyPromoCode" 
-              :disabled="!promoCode || applyingPromo"
-              class="apply-promo-btn"
-            >
-              {{ applyingPromo ? 'Applying...' : 'Apply' }}
-            </button>
           </div>
-          <div v-if="appliedPromo" class="applied-promo">
-            <span class="promo-text">{{ appliedPromo.code }} applied</span>
-            <button @click="removePromo" class="remove-promo-btn">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-        </section>
+        </div>
 
-        <!-- Order Summary -->
-        <section class="order-summary">
-          <h3 class="summary-title">Order Summary</h3>
+        <aside v-if="cartItems.length > 0" class="order-summary-desktop">
+          <h3>Order Summary</h3>
           <div class="summary-breakdown">
             <div class="summary-line">
               <span>Subtotal ({{ totalItems }} items)</span>
@@ -166,72 +270,52 @@
               <span>${{ total.toFixed(2) }}</span>
             </div>
           </div>
-        </section>
-      </div>
-    </main>
-
-    <!-- Sticky Checkout Button -->
-    <div v-if="cartItems.length" class="checkout-section">
-      <div class="checkout-container">
-        <div class="checkout-info">
-          <div class="total-amount">${{ total.toFixed(2) }}</div>
-          <div class="total-items">{{ totalItems }} items</div>
-        </div>
-        <button 
-          @click="proceedToCheckout" 
-          :disabled="processingCheckout"
-          class="checkout-btn"
-        >
-          <span v-if="!processingCheckout">Checkout</span>
-          <div v-else class="loading-spinner small"></div>
-        </button>
+          <div class="promo-section">
+            <div class="promo-input-container">
+              <input v-model="promoCode" type="text" placeholder="Promo code" class="promo-input"/>
+              <button @click="applyPromoCode" :disabled="!promoCode || applyingPromo" class="apply-promo-btn">
+                {{ applyingPromo ? 'Applying...' : 'Apply' }}
+              </button>
+            </div>
+            <div v-if="appliedPromo" class="applied-promo">
+              <span class="promo-text">{{ appliedPromo.code }} applied</span>
+              <button @click="removePromo" class="remove-promo-btn">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+          <button @click="proceedToCheckout" :disabled="processingCheckout" class="checkout-btn-desktop">
+            <span v-if="!processingCheckout">Proceed to Checkout</span>
+            <div v-else class="loading-spinner small"></div>
+          </button>
+        </aside>
       </div>
     </div>
-
-    <!-- Bottom Navigation -->
-    <nav class="bottom-navigation">
-      <router-link to="/" class="nav-item">
-        <i class="fas fa-home"></i>
-        <span>Home</span>
-      </router-link>
-      <router-link to="/shop" class="nav-item">
-        <i class="fas fa-search"></i>
-        <span>Shop</span>
-      </router-link>
-      <router-link to="/cart" class="nav-item active">
-        <i class="fas fa-shopping-bag"></i>
-        <span>Cart</span>
-      </router-link>
-      <router-link to="/account" class="nav-item">
-        <i class="fas fa-user"></i>
-        <span>Account</span>
-      </router-link>
-    </nav>
-
-    <!-- Confirmation Modals -->
-    <transition name="modal">
-      <div v-if="showClearModal" class="modal-overlay" @click="closeClearModal">
-        <div class="modal-content" @click.stop>
-          <h3>Clear Cart?</h3>
-          <p>Are you sure you want to remove all items from your cart?</p>
-          <div class="modal-actions">
-            <button @click="closeClearModal" class="cancel-btn">Cancel</button>
-            <button @click="confirmClearCart" class="confirm-btn">Clear Cart</button>
-          </div>
-        </div>
-      </div>
-    </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import cartService from '../services/cartService'
 import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
 const { token } = useAuth()
+
+const isMobile = ref(window.innerWidth < 768)
+
+const handleResize = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+})
 
 // Reactive data
 const isLoading = ref(true)
@@ -334,7 +418,6 @@ const removeItem = async (itemId) => {
       cartItems.value = cartItems.value.filter(item => item.id !== itemId)
       hideItemActions(itemId)
 
-      // Haptic feedback
       if (navigator.vibrate) {
         navigator.vibrate(50)
       }
@@ -345,8 +428,6 @@ const removeItem = async (itemId) => {
 }
 
 const saveForLater = (itemId) => {
-  
-  // Implementation for saving to wishlist
   hideItemActions(itemId)
 }
 
@@ -364,10 +445,8 @@ const applyPromoCode = async () => {
   applyingPromo.value = true
   
   try {
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    // Mock promo codes
     const promoCodes = {
       'SAVE10': { code: 'SAVE10', discount: 10 },
       'WELCOME15': { code: 'WELCOME15', discount: 15 },
@@ -379,7 +458,6 @@ const applyPromoCode = async () => {
       appliedPromo.value = promo
       promoCode.value = ''
       
-      // Success feedback
       if (navigator.vibrate) {
         navigator.vibrate(50)
       }
@@ -387,7 +465,6 @@ const applyPromoCode = async () => {
       alert('Invalid promo code')
     }
   } catch (error) {
-    
     alert('Failed to apply promo code')
   } finally {
     applyingPromo.value = false
@@ -413,7 +490,6 @@ const confirmClearCart = async () => {
       cartItems.value = []
       showClearModal.value = false
 
-      // Haptic feedback
       if (navigator.vibrate) {
         navigator.vibrate([50, 30, 50])
       }
@@ -427,11 +503,9 @@ const proceedToCheckout = async () => {
   processingCheckout.value = true
   
   try {
-    // Simulate processing
     await new Promise(resolve => setTimeout(resolve, 1000))
     router.push('/checkout')
   } catch (error) {
-    
     alert('Failed to proceed to checkout')
   } finally {
     processingCheckout.value = false
@@ -461,14 +535,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Mobile-First Cart Styles */
+/* Base Styles */
 .cart-page {
   min-height: 100vh;
   background-color: #f8fafc;
-  padding-bottom: 140px; /* Account for sticky checkout + bottom nav */
 }
 
-/* Mobile Header */
+/* Mobile-First Cart Styles */
+.mobile-first {
+  padding-bottom: 140px;
+}
+
 .mobile-header {
   position: fixed;
   top: 0;
@@ -524,13 +601,11 @@ onMounted(() => {
   display: block;
 }
 
-/* Main Content */
 .main-content {
   margin-top: 70px;
   padding: 1rem;
 }
 
-/* Loading State */
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -565,7 +640,6 @@ onMounted(() => {
   color: #64748b;
 }
 
-/* Empty Cart */
 .empty-cart {
   display: flex;
   align-items: center;
@@ -615,7 +689,6 @@ onMounted(() => {
   transform: translateY(-2px);
 }
 
-/* Cart Items */
 .cart-items-section {
   margin-bottom: 2rem;
 }
@@ -749,7 +822,6 @@ onMounted(() => {
   color: #1a1a1a;
 }
 
-/* Item Actions */
 .item-actions {
   position: absolute;
   right: -120px;
@@ -795,7 +867,6 @@ onMounted(() => {
   background: #7c3aed;
 }
 
-/* Promo Section */
 .promo-section {
   background: white;
   border-radius: 12px;
@@ -866,7 +937,6 @@ onMounted(() => {
   padding: 0.25rem;
 }
 
-/* Order Summary */
 .order-summary {
   background: white;
   border-radius: 12px;
@@ -906,7 +976,6 @@ onMounted(() => {
   color: #1a1a1a;
 }
 
-/* Checkout Section */
 .checkout-section {
   position: fixed;
   bottom: 80px;
@@ -966,7 +1035,6 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-/* Bottom Navigation */
 .bottom-navigation {
   position: fixed;
   bottom: 0;
@@ -1004,7 +1072,6 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* Modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1074,6 +1141,117 @@ onMounted(() => {
   background: #dc2626;
 }
 
+/* Desktop Styles */
+.desktop-cart-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.desktop-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.cart-main-content {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+
+.desktop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.desktop-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.cart-items-list-desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.cart-item-desktop {
+  display: grid;
+  grid-template-columns: 100px 1fr auto auto;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.item-image-desktop img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.item-info-desktop .item-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.item-actions-desktop {
+  margin-top: 0.5rem;
+}
+
+.remove-btn-desktop, .save-btn-desktop {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-right: 1rem;
+}
+
+.item-price-desktop {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.order-summary-desktop {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 2rem;
+}
+
+.order-summary-desktop h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.checkout-btn-desktop {
+  width: 100%;
+  background: #1a1a1a;
+  color: white;
+  padding: 1rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-top: 1rem;
+}
+
+.checkout-btn-desktop:hover {
+  background: #374151;
+}
+
 /* Animations */
 .cart-item-enter-active,
 .cart-item-leave-active {
@@ -1101,26 +1279,15 @@ onMounted(() => {
   transform: scale(0.9);
 }
 
-/* Responsive Design */
-@media (min-width: 640px) {
-  .item-content {
-    padding: 1.5rem;
-  }
-  
-  .item-image {
-    width: 100px;
-    height: 100px;
-  }
-  
-  .checkout-container {
-    padding: 1.5rem;
+@media (max-width: 767px) {
+  .desktop-view {
+    display: none;
   }
 }
 
-/* Touch-specific styles */
-@media (hover: none) and (pointer: coarse) {
-  .item-actions {
-    opacity: 1;
+@media (min-width: 768px) {
+  .mobile-first {
+    display: none;
   }
 }
 </style>

@@ -1,35 +1,19 @@
 <template>
-  <div id="app" :class="{ 'mobile-layout': isMobileRoute }">
-    <!-- Traditional navbar for desktop pages -->
-    <Navbar v-if="!isMobileRoute" />
+  <div id="app">
+    <Navbar />
     
-    <!-- Main content area -->
-    <main :class="['main-content', { 'mobile-main': isMobileRoute }]">
+    <main class="main-content">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
         </transition>
       </router-view>
     </main>
-    
-    <!-- Traditional footer for desktop pages -->  </div>
+  </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
-import Footer from './components/Footer.vue'
-
-const route = useRoute()
-
-// Determine if current route should use mobile layout
-const isMobileRoute = computed(() => {
-  const mobileRoutes = ['/', '/shop', '/cart', '/account', '/product']
-  return mobileRoutes.some(mobilePath => 
-    route.path === mobilePath || route.path.startsWith('/product/')
-  )
-})
 </script>
 
 <style>
@@ -38,15 +22,6 @@ const isMobileRoute = computed(() => {
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 
 :root {
-  /* Original theme colors */
-  --c1: #FFB2E6;
-  --c2: #F7AEF8;
-  --c3: #E382F9;
-  --c4: #B388EB;
-  --c5: #9A52FF;
-  --c6: #8447FF;
-  --c7: #72DDF7;
-  
   /* Modern mobile-first colors */
   --primary: #1a1a1a;
   --secondary: #64748b;
@@ -57,11 +32,6 @@ const isMobileRoute = computed(() => {
   --text-primary: #0f172a;
   --text-secondary: #64748b;
   --text-muted: #94a3b8;
-  
-  /* Legacy variables for backward compatibility */
-  --bg-color: #ffffff;
-  --text-color: #1a1a1a;
-  --light-gray: #f8fafc;
 }
 
 /* CSS Reset and Base Styles */
@@ -96,77 +66,10 @@ body {
   min-height: 100vh;
 }
 
-#app.mobile-layout {
-  background-color: var(--surface);
-}
-
 /* Main Content */
 .main-content {
   flex-grow: 1;
-}
-
-.main-content.mobile-main {
-  flex-grow: 1;
-  min-height: 100vh;
-}
-
-/* Utility Classes */
-.container {
-  width: 90%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.section {
-  padding: 6rem 0;
-}
-
-.section-title {
-  font-size: 2.8rem;
-  font-weight: 600;
-  text-align: center;
-  margin-bottom: 4rem;
-  color: var(--text-primary);
-}
-
-/* Buttons */
-.cta-button {
-  background-color: var(--primary);
-  color: white;
-  padding: 1rem 2.5rem;
-  border-radius: 50px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-block;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.cta-button:hover {
-  background-color: var(--secondary);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.cta-button:active {
-  transform: translateY(0);
-}
-
-/* Page Headers */
-.page-header {
-  padding: 6rem 0;
-  background-color: var(--surface);
-  text-align: center;
-}
-
-.page-header h1 {
-  font-size: 3.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
+  padding-top: 5rem; /* Add padding to account for fixed navbar */
 }
 
 /* Transitions */
@@ -178,44 +81,6 @@ body {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-}
-
-/* Mobile-specific adjustments */
-@media (max-width: 768px) {
-  .container {
-    width: 100%;
-    padding: 0;
-  }
-  
-  .section {
-    padding: 3rem 0;
-  }
-  
-  .section-title {
-    font-size: 2rem;
-    margin-bottom: 2rem;
-  }
-  
-  .page-header {
-    padding: 3rem 0;
-  }
-  
-  .page-header h1 {
-    font-size: 2rem;
-  }
-}
-
-/* Touch-friendly interactions */
-@media (hover: none) and (pointer: coarse) {
-  .cta-button:hover {
-    transform: none;
-    box-shadow: none;
-  }
-  
-  .cta-button:active {
-    background-color: var(--secondary);
-    transform: scale(0.98);
-  }
 }
 
 /* Scrollbar styling for webkit browsers */
@@ -244,37 +109,6 @@ textarea:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-}
-
-/* Print styles */
-@media print {
-  .mobile-header,
-  .bottom-navigation,
-  .filter-sidebar {
-    display: none !important;
-  }
-}
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  :root {
-    --primary: #000000;
-    --background: #ffffff;
-    --text-primary: #000000;
-    --border: #000000;
-  }
 }
 
 /* Dark mode support */

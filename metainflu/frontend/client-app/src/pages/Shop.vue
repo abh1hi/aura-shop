@@ -1,257 +1,279 @@
 <template>
-  <div class="shop-page mobile-first" v-touch:swipe="onSwipe">
-    <!-- Mobile Header -->
-    <header class="mobile-header">
-      <div class="header-content">
-        <button class="back-btn" @click="goBack">
-          <i class="fas fa-arrow-left"></i>
-        </button>
-        <div class="header-title">
-          <h1>Shop</h1>
-        </div>
-        <div class="header-actions">
-          <button class="search-btn" @click="toggleSearch">
-            <i class="fas fa-search"></i>
-          </button>
-          <button class="filter-btn" @click="toggleFilters">
-            <i class="fas fa-sliders-h"></i>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Search Bar -->
-    <transition name="slide-down">
-      <div v-if="showSearch" class="search-container">
-        <div class="search-bar">
-          <i class="fas fa-search search-icon"></i>
-          <input 
-            type="text" 
-            v-model="searchQuery" 
-            placeholder="Search products..." 
-            class="search-input"
-            @input="onSearch"
-            ref="searchInput"
-          />
-          <button v-if="searchQuery" @click="clearSearch" class="clear-btn">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-    </transition>
-
-    <!-- Category Tabs -->
-    <nav class="category-tabs" v-if="!showSearch">
-      <div class="tabs-container" ref="tabsContainer">
-        <div 
-          v-for="(category, index) in categories" 
-          :key="category._id"
-          :class="['tab-item', { active: selectedCategoryId === category._id }]"
-          @click="selectCategory(category._id)"
-        >
-          {{ category.name }}
-        </div>
-        <div 
-          :class="['tab-item', { active: selectedCategoryId === null }]"
-          @click="selectCategory(null)"
-        >
-          All
-        </div>
-      </div>
-    </nav>
-
-    <main class="main-content">
-      <!-- Filter and Sort Bar -->
-      <div class="filter-sort-bar" v-if="!showSearch">
-        <div class="sort-options">
-          <select v-model="sortOption" class="sort-select">
-            <option value="new">Newest First</option>
-            <option value="low-high">Price: Low to High</option>
-            <option value="high-low">Price: High to Low</option>
-            <option value="popular">Most Popular</option>
-          </select>
-        </div>
-        <div class="view-toggle">
-          <button 
-            :class="['view-btn', { active: viewMode === 'grid' }]"
-            @click="viewMode = 'grid'"
-          >
-            <i class="fas fa-th"></i>
-          </button>
-          <button 
-            :class="['view-btn', { active: viewMode === 'list' }]"
-            @click="viewMode = 'list'"
-          >
-            <i class="fas fa-bars"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="isLoading" class="loading-container">
-        <div class="loading-spinner"></div>
-        <p class="loading-text">Loading products...</p>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="error" class="error-container">
-        <i class="fas fa-exclamation-triangle error-icon"></i>
-        <p class="error-text">{{ error }}</p>
-        <button @click="fetchInitialData" class="retry-btn">Try Again</button>
-      </div>
-
-      <!-- Empty State -->
-      <div v-else-if="filteredProducts.length === 0" class="empty-container">
-        <i class="fas fa-shopping-bag empty-icon"></i>
-        <h3>No Products Found</h3>
-        <p>Try adjusting your search or filters</p>
-        <button @click="clearAllFilters" class="clear-filters-btn">Clear Filters</button>
-      </div>
-
-      <!-- Products Grid/List -->
-      <div v-else class="products-container">
-        <div class="results-info">
-          <span class="results-count">{{ filteredProducts.length }} items</span>
-        </div>
-        
-        <transition-group 
-          :name="'fade-up'"
-          tag="div" 
-          :class="[
-            'products-grid',
-            { 'list-view': viewMode === 'list' },
-            { 'grid-view': viewMode === 'grid' }
-          ]"
-        >
-          <ProductCard
-            v-for="product in displayedProducts"
-            :key="product.key"
-            :product="product"
-            :mobile="true"
-            :show-rating="true"
-            class="product-item"
-            @click="goToProduct(product)"
-            @favoriteToggled="onFavoriteToggled"
-            @addedToCart="onAddedToCart"
-          />
-        </transition-group>
-
-        <!-- Load More Button -->
-        <div v-if="hasMore" class="load-more-container">
-          <button 
-            @click="loadMore" 
-            :disabled="loadingMore"
-            class="load-more-btn"
-          >
-            <span v-if="!loadingMore">Load More</span>
-            <div v-else class="loading-spinner small"></div>
-          </button>
-        </div>
-      </div>
-    </main>
-
-    <!-- Filter Sidebar -->
-    <transition name="slide-filter">
-      <div v-if="showFilters" class="filter-overlay" @click="closeFilters">
-        <div class="filter-sidebar" @click.stop>
-          <div class="filter-header">
-            <h3>Filters</h3>
-            <button @click="closeFilters" class="close-btn">
-              <i class="fas fa-times"></i>
+  <div class="shop-page" :class="{ 'mobile-first': isMobile, 'desktop-view': !isMobile }">
+    <!-- Mobile UI -->
+    <div v-if="isMobile">
+      <main class="main-content">
+        <div class="filter-sort-bar" v-if="!showSearch">
+          <div class="sort-options">
+            <select v-model="sortOption" class="sort-select">
+              <option value="new">Newest First</option>
+              <option value="low-high">Price: Low to High</option>
+              <option value="high-low">Price: High to Low</option>
+              <option value="popular">Most Popular</option>
+            </select>
+          </div>
+          <div class="view-toggle">
+            <button 
+              :class="['view-btn', { active: viewMode === 'grid' }]"
+              @click="viewMode = 'grid'"
+            >
+              <i class="fas fa-th"></i>
+            </button>
+            <button 
+              :class="['view-btn', { active: viewMode === 'list' }]"
+              @click="viewMode = 'list'"
+            >
+              <i class="fas fa-bars"></i>
             </button>
           </div>
+        </div>
+
+        <div v-if="isLoading" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">Loading products...</p>
+        </div>
+
+        <div v-else-if="error" class="error-container">
+          <i class="fas fa-exclamation-triangle error-icon"></i>
+          <p class="error-text">{{ error }}</p>
+          <button @click="fetchInitialData" class="retry-btn">Try Again</button>
+        </div>
+
+        <div v-else-if="filteredProducts.length === 0" class="empty-container">
+          <i class="fas fa-shopping-bag empty-icon"></i>
+          <h3>No Products Found</h3>
+          <p>Try adjusting your search or filters</p>
+          <button @click="clearAllFilters" class="clear-filters-btn">Clear Filters</button>
+        </div>
+
+        <div v-else class="products-container">
+          <div class="results-info">
+            <span class="results-count">{{ filteredProducts.length }} items</span>
+          </div>
           
-          <div class="filter-content">
-            <!-- Price Range -->
-            <div class="filter-section">
-              <h4>Price Range</h4>
-              <div class="price-inputs">
-                <input 
-                  type="number" 
-                  v-model="priceRange.min" 
-                  placeholder="Min" 
-                  class="price-input"
-                />
-                <span>-</span>
-                <input 
-                  type="number" 
-                  v-model="priceRange.max" 
-                  placeholder="Max" 
-                  class="price-input"
-                />
+          <transition-group 
+            :name="'fade-up'"
+            tag="div" 
+            :class="[
+              'products-grid',
+              { 'list-view': viewMode === 'list' },
+              { 'grid-view': viewMode === 'grid' }
+            ]"
+          >
+            <ProductCard
+              v-for="product in displayedProducts"
+              :key="product.key"
+              :product="product"
+              :mobile="true"
+              :show-rating="true"
+              class="product-item"
+              @click="goToProduct(product)"
+              @favoriteToggled="onFavoriteToggled"
+              @addedToCart="onAddedToCart"
+            />
+          </transition-group>
+
+          <div v-if="hasMore" class="load-more-container">
+            <button 
+              @click="loadMore" 
+              :disabled="loadingMore"
+              class="load-more-btn"
+            >
+              <span v-if="!loadingMore">Load More</span>
+              <div v-else class="loading-spinner small"></div>
+            </button>
+          </div>
+        </div>
+      </main>
+
+      <transition name="slide-filter">
+        <div v-if="showFilters" class="filter-overlay" @click="closeFilters">
+          <div class="filter-sidebar" @click.stop>
+            <div class="filter-header">
+              <h3>Filters</h3>
+              <button @click="closeFilters" class="close-btn">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div class="filter-content">
+              <div class="filter-section">
+                <h4>Price Range</h4>
+                <div class="price-inputs">
+                  <input type="number" v-model="priceRange.min" placeholder="Min" class="price-input"/>
+                  <span>-</span>
+                  <input type="number" v-model="priceRange.max" placeholder="Max" class="price-input"/>
+                </div>
+              </div>
+              
+              <div class="filter-section">
+                <h4>Size</h4>
+                <div class="size-options">
+                  <label v-for="size in availableSizes" :key="size" class="size-option">
+                    <input type="checkbox" :value="size" v-model="selectedSizes"/>
+                    <span class="size-label">{{ size }}</span>
+                  </label>
+                </div>
+              </div>
+              
+              <div class="filter-section">
+                <h4>Colors</h4>
+                <div class="color-options">
+                  <label v-for="color in availableColors" :key="color" class="color-option">
+                    <input type="checkbox" :value="color" v-model="selectedColors"/>
+                    <span class="color-swatch" :style="{ backgroundColor: color }"></span>
+                    <span class="color-name">{{ color }}</span>
+                  </label>
+                </div>
               </div>
             </div>
             
-            <!-- Size Filter -->
+            <div class="filter-actions">
+              <button @click="clearAllFilters" class="clear-btn">Clear All</button>
+              <button @click="applyFilters" class="apply-btn">Apply Filters</button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </div>
+
+    <!-- Desktop UI -->
+    <div v-else class="desktop-shop-page">
+      <div class="desktop-container">
+        <aside class="desktop-filter-sidebar">
+          <h3>Filters</h3>
+          <div class="filter-content">
+            <div class="filter-section">
+              <h4>Category</h4>
+              <ul class="category-list">
+                <li 
+                  v-for="category in categories" 
+                  :key="category._id" 
+                  :class="{ active: selectedCategoryId === category._id }"
+                  @click="selectCategory(category._id)"
+                >
+                  {{ category.name }}
+                </li>
+                <li :class="{ active: selectedCategoryId === null }" @click="selectCategory(null)">All</li>
+              </ul>
+            </div>
+            <div class="filter-section">
+              <h4>Price Range</h4>
+              <div class="price-inputs">
+                <input type="number" v-model="priceRange.min" placeholder="Min" class="price-input"/>
+                <span>-</span>
+                <input type="number" v-model="priceRange.max" placeholder="Max" class="price-input"/>
+              </div>
+            </div>
             <div class="filter-section">
               <h4>Size</h4>
               <div class="size-options">
                 <label v-for="size in availableSizes" :key="size" class="size-option">
-                  <input 
-                    type="checkbox" 
-                    :value="size" 
-                    v-model="selectedSizes"
-                  />
+                  <input type="checkbox" :value="size" v-model="selectedSizes"/>
                   <span class="size-label">{{ size }}</span>
                 </label>
               </div>
             </div>
-            
-            <!-- Color Filter -->
             <div class="filter-section">
               <h4>Colors</h4>
               <div class="color-options">
                 <label v-for="color in availableColors" :key="color" class="color-option">
-                  <input 
-                    type="checkbox" 
-                    :value="color" 
-                    v-model="selectedColors"
-                  />
+                  <input type="checkbox" :value="color" v-model="selectedColors"/>
                   <span class="color-swatch" :style="{ backgroundColor: color }"></span>
                   <span class="color-name">{{ color }}</span>
                 </label>
               </div>
             </div>
           </div>
-          
-          <div class="filter-actions">
-            <button @click="clearAllFilters" class="clear-btn">Clear All</button>
-            <button @click="applyFilters" class="apply-btn">Apply Filters</button>
-          </div>
-        </div>
-      </div>
-    </transition>
+        </aside>
 
-    <!-- Bottom Navigation -->
-    <nav class="bottom-navigation">
-      <router-link to="/" class="nav-item">
-        <i class="fas fa-home"></i>
-        <span>Home</span>
-      </router-link>
-      <router-link to="/shop" class="nav-item active">
-        <i class="fas fa-search"></i>
-        <span>Shop</span>
-      </router-link>
-      <router-link to="/cart" class="nav-item">
-        <i class="fas fa-shopping-bag"></i>
-        <span>Cart</span>
-      </router-link>
-      <router-link to="/account" class="nav-item">
-        <i class="fas fa-user"></i>
-        <span>Account</span>
-      </router-link>
-    </nav>
+        <main class="desktop-main-content">
+          <header class="desktop-header">
+            <div class="results-summary">
+              <h2>Results</h2>
+              <p>{{ filteredProducts.length }} items</p>
+            </div>
+            <div class="sort-options">
+              <label for="sort">Sort by:</label>
+              <select id="sort" v-model="sortOption" class="sort-select">
+                <option value="new">Newest First</option>
+                <option value="low-high">Price: Low to High</option>
+                <option value="high-low">Price: High to Low</option>
+                <option value="popular">Most Popular</option>
+              </select>
+            </div>
+          </header>
+
+          <div v-if="isLoading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Loading products...</p>
+          </div>
+
+          <div v-else-if="error" class="error-container">
+            <i class="fas fa-exclamation-triangle error-icon"></i>
+            <p class="error-text">{{ error }}</p>
+            <button @click="fetchInitialData" class="retry-btn">Try Again</button>
+          </div>
+
+          <div v-else-if="filteredProducts.length === 0" class="empty-container">
+            <i class="fas fa-shopping-bag empty-icon"></i>
+            <h3>No Products Found</h3>
+            <p>Try adjusting your search or filters</p>
+            <button @click="clearAllFilters" class="clear-filters-btn">Clear Filters</button>
+          </div>
+
+          <div v-else class="desktop-products-grid">
+            <ProductCard
+              v-for="product in displayedProducts"
+              :key="product.key"
+              :product="product"
+              :mobile="false"
+              :show-rating="true"
+              class="product-item"
+              @click="goToProduct(product)"
+              @favoriteToggled="onFavoriteToggled"
+              @addedToCart="onAddedToCart"
+            />
+          </div>
+
+          <div v-if="hasMore" class="load-more-container">
+            <button 
+              @click="loadMore" 
+              :disabled="loadingMore"
+              class="load-more-btn"
+            >
+              <span v-if="!loadingMore">Load More</span>
+              <div v-else class="loading-spinner small"></div>
+            </button>
+          </div>
+        </main>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
 import productService from '../services/productService'
 import categoryService from '../services/categoryService'
 
 const router = useRouter()
+
+const isMobile = ref(window.innerWidth < 768)
+
+const handleResize = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+})
 
 // Reactive data
 const allProducts = ref([])
@@ -433,10 +455,6 @@ const loadMore = () => {
   }, 500)
 }
 
-const goBack = () => {
-  router.go(-1)
-}
-
 const goToProduct = (product) => {
   router.push({ name: 'ProductDetail', params: { id: product._id } })
 }
@@ -466,152 +484,21 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Mobile-First Design */
+/* Base Styles */
 .shop-page {
   min-height: 100vh;
   background-color: #f8f9fa;
+}
+
+/* Mobile-First Design */
+.mobile-first {
   padding-bottom: 80px;
 }
 
-/* Mobile Header */
-.mobile-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  z-index: 50;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-}
-
-.back-btn, .search-btn, .filter-btn {
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  transition: background-color 0.3s;
-}
-
-.back-btn:hover, .search-btn:hover, .filter-btn:hover {
-  background-color: #f1f5f9;
-}
-
-.header-title h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin: 0;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-/* Search Container */
-.search-container {
-  position: fixed;
-  top: 70px;
-  left: 0;
-  right: 0;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-  z-index: 40;
-  padding: 1rem;
-}
-
-.search-bar {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  color: #64748b;
-  z-index: 1;
-}
-
-.search-input {
-  width: 100%;
-  padding: 12px 16px 12px 40px;
-  border: 2px solid #e2e8f0;
-  border-radius: 25px;
-  font-size: 1rem;
-  transition: border-color 0.3s;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #1a1a1a;
-}
-
-.clear-btn {
-  position: absolute;
-  right: 12px;
-  background: none;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-}
-
-/* Category Tabs */
-.category-tabs {
-  position: fixed;
-  top: 70px;
-  left: 0;
-  right: 0;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-  z-index: 40;
-}
-
-.tabs-container {
-  display: flex;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  padding: 0 1rem;
-}
-
-.tabs-container::-webkit-scrollbar {
-  display: none;
-}
-
-.tab-item {
-  flex-shrink: 0;
-  padding: 1rem 1.5rem;
-  color: #64748b;
-  font-weight: 500;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.tab-item.active {
-  color: #1a1a1a;
-  border-bottom-color: #1a1a1a;
-}
-
-/* Main Content */
 .main-content {
-  margin-top: 130px;
   padding: 0 1rem;
 }
 
-/* Filter Sort Bar */
 .filter-sort-bar {
   display: flex;
   justify-content: space-between;
@@ -653,7 +540,6 @@ onMounted(() => {
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-/* Loading States */
 .loading-container, .error-container, .empty-container {
   display: flex;
   flex-direction: column;
@@ -704,7 +590,6 @@ onMounted(() => {
   cursor: pointer;
 }
 
-/* Products Container */
 .results-info {
   margin-bottom: 1rem;
   font-size: 0.9rem;
@@ -729,7 +614,6 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-/* Load More */
 .load-more-container {
   display: flex;
   justify-content: center;
@@ -758,7 +642,6 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-/* Filter Sidebar */
 .filter-overlay {
   position: fixed;
   top: 0;
@@ -882,42 +765,82 @@ onMounted(() => {
   color: white;
 }
 
-/* Bottom Navigation */
-.bottom-navigation {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  display: flex;
-  padding: 0.75rem 0;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-  z-index: 50;
+/* Desktop Styles */
+.desktop-shop-page {
+  padding: 2rem;
 }
 
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-decoration: none;
-  color: #64748b;
-  transition: color 0.3s ease;
+.desktop-container {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.nav-item.active,
-.nav-item:hover {
-  color: #1a1a1a;
+.desktop-filter-sidebar {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  height: fit-content;
+  position: sticky;
+  top: 2rem;
 }
 
-.nav-item i {
-  font-size: 1.2rem;
-  margin-bottom: 0.25rem;
+.desktop-filter-sidebar h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
 }
 
-.nav-item span {
-  font-size: 0.7rem;
+.category-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.category-list li {
+  padding: 0.5rem 0;
+  cursor: pointer;
   font-weight: 500;
+  color: #4a5568;
+  transition: color 0.2s;
+}
+
+.category-list li.active {
+  color: #000;
+  font-weight: 700;
+}
+
+.desktop-main-content {
+  min-width: 0;
+}
+
+.desktop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  background: #fff;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+
+.results-summary h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.results-summary p {
+  color: #718096;
+}
+
+.desktop-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
 }
 
 /* Animations */
@@ -964,20 +887,15 @@ onMounted(() => {
   transform: translateY(20px);
 }
 
-/* Responsive Design */
-@media (min-width: 640px) {
-  .products-grid.grid-view {
-    grid-template-columns: repeat(3, 1fr);
+@media (max-width: 767px) {
+  .desktop-view {
+    display: none;
   }
 }
 
-@media (min-width: 1024px) {
-  .products-grid.grid-view {
-    grid-template-columns: repeat(4, 1fr);
-  }
-  
-  .main-content {
-    padding: 0 2rem;
+@media (min-width: 768px) {
+  .mobile-first {
+    display: none;
   }
 }
 </style>

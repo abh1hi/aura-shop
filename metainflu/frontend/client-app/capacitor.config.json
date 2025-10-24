@@ -4,10 +4,12 @@
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {
+    "url": "https://3czzqk3l-5173.use2.devtunnels.ms",
     "androidScheme": "https",
     "allowNavigation": [
       "*"
-    ]
+    ],
+    "cleartext": true
   },
   "plugins": {
     "CapacitorHttp": {
