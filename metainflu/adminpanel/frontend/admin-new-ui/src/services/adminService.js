@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios'
-import * as yup from 'yup'
+import { validateData } from '../utils/validation.js'
 import DOMPurify from 'dompurify'
 
 class AdminService {
@@ -80,115 +80,6 @@ class AdminService {
         return Promise.reject(this.handleError(error))
       }
     )
-  }
-
-  // Validation schemas using Yup
-  static validationSchemas = {
-    product: yup.object().shape({
-      name: yup
-        .string()
-        .min(3, 'Product name must be at least 3 characters')
-        .max(100, 'Product name cannot exceed 100 characters')
-        .matches(/^[a-zA-Z0-9\s\-_.'\'"]+$/, 'Product name contains invalid characters')
-        .required('Product name is required'),
-      description: yup
-        .string()
-        .max(1000, 'Description cannot exceed 1000 characters')
-        .nullable(),
-      brand: yup
-        .string()
-        .max(50, 'Brand name cannot exceed 50 characters')
-        .matches(/^[a-zA-Z0-9\s\-_.'\'"]*$/, 'Brand name contains invalid characters')
-        .nullable(),
-      price: yup
-        .number()
-        .positive('Price must be positive')
-        .max(999999.99, 'Price cannot exceed $999,999.99')
-        .required('Price is required'),
-      stock: yup
-        .number()
-        .integer('Stock must be a whole number')
-        .min(0, 'Stock cannot be negative')
-        .max(999999, 'Stock cannot exceed 999,999')
-        .required('Stock is required'),
-      category: yup
-        .string()
-        .matches(/^[0-9a-fA-F]{24}$/, 'Invalid category ID format')
-        .required('Category is required'),
-      tags: yup
-        .array()
-        .of(
-          yup
-            .string()
-            .max(50, 'Tag cannot exceed 50 characters')
-            .matches(/^[a-zA-Z0-9\s\-_]+$/, 'Tag contains invalid characters')
-        )
-        .max(10, 'Cannot have more than 10 tags')
-        .default([])
-    }),
-
-    category: yup.object().shape({
-      name: yup
-        .string()
-        .min(2, 'Category name must be at least 2 characters')
-        .max(50, 'Category name cannot exceed 50 characters')
-        .matches(/^[a-zA-Z0-9\s\-]+$/, 'Category name can only contain letters, numbers, spaces, and hyphens')
-        .required('Category name is required'),
-      description: yup
-        .string()
-        .max(200, 'Description cannot exceed 200 characters')
-        .nullable(),
-      parentId: yup
-        .string()
-        .matches(/^[0-9a-fA-F]{24}$/, 'Invalid parent category ID format')
-        .nullable(),
-      status: yup
-        .string()
-        .oneOf(['active', 'inactive'], 'Status must be active or inactive')
-        .default('active')
-    }),
-
-    user: yup.object().shape({
-      name: yup
-        .string()
-        .min(2, 'Name must be at least 2 characters')
-        .max(50, 'Name cannot exceed 50 characters')
-        .matches(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces')
-        .required('Name is required'),
-      email: yup
-        .string()
-        .email('Invalid email format')
-        .max(100, 'Email cannot exceed 100 characters')
-        .required('Email is required'),
-      role: yup
-        .string()
-        .oneOf(['user', 'vendor', 'admin'], 'Invalid role')
-        .required('Role is required'),
-      isActive: yup
-        .boolean()
-        .default(true)
-    })
-  }
-
-  // Data validation using Yup
-  async validateData(data, schemaName) {
-    const schema = AdminService.validationSchemas[schemaName]
-    if (!schema) {
-      throw new Error(`Validation schema '${schemaName}' not found`)
-    }
-
-    try {
-      const validatedData = await schema.validate(data, {
-        abortEarly: false,
-        stripUnknown: true
-      })
-      return validatedData
-    } catch (error) {
-      const validationError = new Error('Validation failed')
-      validationError.name = 'ValidationError'
-      validationError.details = error.errors || [error.message]
-      throw validationError
-    }
   }
 
   // Data sanitization
@@ -353,7 +244,7 @@ class AdminService {
   async createProduct(productData) {
     try {
       // Client-side validation
-      const validatedData = await this.validateData(productData, 'product')
+      const validatedData = validateData(productData, 'product')
       
       const response = await this.api.post('/admin/products', validatedData)
       return response.data
@@ -365,7 +256,7 @@ class AdminService {
   async updateProduct(id, productData) {
     try {
       // Client-side validation (partial update)
-      const validatedData = await this.validateData(productData, 'product')
+      const validatedData = validateData(productData, 'product')
       
       const response = await this.api.put(`/admin/products/${id}`, validatedData)
       return response.data
@@ -395,7 +286,7 @@ class AdminService {
 
   async createCategory(categoryData) {
     try {
-      const validatedData = await this.validateData(categoryData, 'category')
+      const validatedData = validateData(categoryData, 'category')
       const response = await this.api.post('/admin/categories', validatedData)
       return response.data
     } catch (error) {
@@ -405,7 +296,7 @@ class AdminService {
 
   async updateCategory(id, categoryData) {
     try {
-      const validatedData = await this.validateData(categoryData, 'category')
+      const validatedData = validateData(categoryData, 'category')
       const response = await this.api.put(`/admin/categories/${id}`, validatedData)
       return response.data
     } catch (error) {
@@ -436,7 +327,7 @@ class AdminService {
 
   async updateUser(id, userData) {
     try {
-      const validatedData = await this.validateData(userData, 'user')
+      const validatedData = validateData(userData, 'user')
       const response = await this.api.put(`/admin/users/${id}`, validatedData)
       return response.data
     } catch (error) {
