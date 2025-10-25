@@ -1,6 +1,6 @@
 /*
  * Comprehensive Security Middleware
- * Includes rate limiting, CSRF protection, security headers, and more
+ * Updated to use custom CSRF protection and latest security practices
  */
 
 const rateLimit = require('express-rate-limit')
@@ -8,7 +8,7 @@ const helmet = require('helmet')
 const hpp = require('hpp')
 const compression = require('compression')
 const cookieParser = require('cookie-parser')
-const csrf = require('csurf')
+const { csrfProtection, generateCSRFToken, csrfTokenHandler } = require('./csrf')
 
 // Rate limiting configurations
 const createRateLimiter = (windowMs, max, message, skipSuccessful = false) => {
@@ -82,7 +82,7 @@ const securityHeaders = helmet({
       defaultSrc: ["'self'"],
       scriptSrc: [
         "'self'",
-        "'unsafe-inline'", // Remove in production if possible
+        "'unsafe-inline'", // Minimize in production
         "'unsafe-eval'" // Remove in production if possible
       ],
       styleSrc: [
@@ -152,17 +152,6 @@ const corsConfig = {
   maxAge: 86400, // 24 hours
   optionsSuccessStatus: 200
 }
-
-// CSRF protection configuration
-const csrfProtection = csrf({
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 3600000 // 1 hour
-  },
-  ignoreMethods: ['GET', 'HEAD', 'OPTIONS']
-})
 
 // Request logging middleware
 const requestLogger = (req, res, next) => {
@@ -253,7 +242,7 @@ const requestSizeLimiter = (limit = '10mb') => {
   }
 }
 
-// Security middleware stack
+// Enhanced security middleware stack
 const securityMiddleware = [
   // Basic security headers
   securityHeaders,
@@ -276,21 +265,15 @@ const securityMiddleware = [
   ipFilter,
   
   // Request size limiting
-  requestSizeLimiter('10mb')
+  requestSizeLimiter('10mb'),
+  
+  // Generate CSRF tokens for requests
+  generateCSRFToken
 ]
 
 // Apply rate limiting based on route
 const applyRateLimit = (type = 'general') => {
   return rateLimiters[type] || rateLimiters.general
-}
-
-// CSRF token endpoint
-const csrfTokenHandler = (req, res) => {
-  res.json({
-    success: true,
-    csrfToken: req.csrfToken(),
-    timestamp: new Date().toISOString()
-  })
 }
 
 // Security headers for API responses
@@ -307,6 +290,37 @@ const apiSecurityHeaders = (req, res, next) => {
   next()
 }
 
+// Advanced threat detection middleware
+const threatDetection = (req, res, next) => {
+  const suspiciousPatterns = [
+    // SQL injection patterns
+    /('|(\-\-)|;|\||\*|(\%27)|(\%2D\%2D)|(\%7C)|(\%2A))/i,
+    // XSS patterns
+    /(<|%3C).*?(>|%3E)/i,
+    // Path traversal
+    /\.\.[\/\\]/,
+    // Command injection
+    /(;|\||`|&|\$|>|<)/
+  ]
+  
+  const checkString = req.originalUrl + JSON.stringify(req.body) + JSON.stringify(req.query)
+  
+  for (const pattern of suspiciousPatterns) {
+    if (pattern.test(checkString)) {
+      logSecurityEvent('SUSPICIOUS_REQUEST_PATTERN', {
+        pattern: pattern.toString(),
+        url: req.originalUrl,
+        method: req.method
+      }, req)
+      
+      // Log but don't block (to avoid false positives)
+      break
+    }
+  }
+  
+  next()
+}
+
 module.exports = {
   securityMiddleware,
   rateLimiters,
@@ -316,5 +330,6 @@ module.exports = {
   csrfTokenHandler,
   logSecurityEvent,
   apiSecurityHeaders,
-  requestSizeLimiter
+  requestSizeLimiter,
+  threatDetection
 }
