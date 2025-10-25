@@ -24,7 +24,7 @@
     "vue-chartjs": "^5.3.1",
     "vue3-datepicker": "^0.4.0",
     "axios": "^1.7.7",
-    "joi": "^17.13.3",
+    "yup": "^1.4.0",
     "dompurify": "^3.1.7",
     "js-cookie": "^3.0.5",
     "vue-toastification": "^2.0.0-rc.5",
