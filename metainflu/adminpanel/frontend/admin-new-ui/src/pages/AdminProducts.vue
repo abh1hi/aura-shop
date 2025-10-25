@@ -5,209 +5,170 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold text-neutral-900">Products</h1>
-          <p class="text-neutral-600 mt-1">Manage your product catalog</p>
+          <p class="text-neutral-600 mt-1">
+            Manage your product catalog 
+            <span v-if="totalProducts > 0" class="text-primary-600 font-medium">
+              ({{ totalProducts }} products)
+            </span>
+          </p>
         </div>
         
         <div class="flex items-center space-x-3">
-          <BaseButton variant="ghost" icon="funnel" size="sm">
+          <BaseButton 
+            variant="ghost" 
+            icon="funnel" 
+            size="sm"
+            @click="showFilters = !showFilters"
+            :class="{ 'bg-primary-50 text-primary-600': showFilters }"
+          >
             Filters
           </BaseButton>
-          <BaseButton variant="primary" icon="plus" size="sm" @click="showCreateModal = true">
+          <BaseButton 
+            variant="primary" 
+            icon="plus" 
+            size="sm" 
+            @click="createProduct"
+            :disabled="isLoading"
+          >
             Add Product
           </BaseButton>
         </div>
       </div>
       
       <!-- Filters -->
-      <BaseCard variant="default" padding="normal">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <BaseInput
-            v-model="filters.search"
-            placeholder="Search products..."
-            left-icon="magnifying-glass"
-            clearable
-          />
-          
-          <BaseSelect
-            v-model="filters.category"
-            placeholder="All Categories"
-            :options="categoryOptions"
-          />
-          
-          <BaseSelect
-            v-model="filters.status"
-            placeholder="All Status"
-            :options="statusOptions"
-          />
-          
-          <BaseButton variant="secondary" full-width @click="applyFilters">
-            Apply Filters
-          </BaseButton>
-        </div>
-      </BaseCard>
-      
-      <!-- Products Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <BaseCard
-          v-for="product in filteredProducts"
-          :key="product.id"
-          variant="default"
-          padding="none"
-          hover
-        >
-          <!-- Product Image -->
-          <div class="aspect-square bg-neutral-100 relative overflow-hidden">
-            <img
-              v-if="product.image"
-              :src="product.image"
-              :alt="product.name"
-              class="w-full h-full object-cover"
+      <Transition name="slide-down">
+        <BaseCard v-if="showFilters" variant="default" padding="normal">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <BaseInput
+              v-model="filters.search"
+              placeholder="Search products..."
+              left-icon="magnifying-glass"
+              clearable
+              @input="debouncedSearch"
+            />
+            
+            <BaseSelect
+              v-model="filters.category"
+              placeholder="All Categories"
+              :options="categoryOptions"
+              :loading="categoriesLoading"
+            />
+            
+            <BaseSelect
+              v-model="filters.status"
+              placeholder="All Status"
+              :options="statusOptions"
+            />
+            
+            <BaseButton 
+              variant="secondary" 
+              full-width 
+              @click="applyFilters"
+              :loading="isLoading"
             >
-            <div v-else class="w-full h-full flex items-center justify-center">
-              <BaseIcon name="photo" size="xl" class="text-neutral-400" />
-            </div>
-            
-            <!-- Status badge -->
-            <div class="absolute top-3 left-3">
-              <BaseBadge
-                :variant="product.status === 'active' ? 'success' : product.status === 'draft' ? 'warning' : 'neutral'"
-                size="sm"
-              >
-                {{ product.status }}
-              </BaseBadge>
-            </div>
-            
-            <!-- Actions -->
-            <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-              <div class="flex space-x-1">
-                <BaseButton
-                  variant="secondary"
-                  icon-only
-                  size="sm"
-                  icon="pencil"
-                  @click="editProduct(product)"
-                />
-                <BaseButton
-                  variant="danger"
-                  icon-only
-                  size="sm"
-                  icon="trash"
-                  @click="deleteProduct(product.id)"
-                />
-              </div>
-            </div>
-          </div>
-          
-          <!-- Product Info -->
-          <div class="p-4">
-            <h3 class="font-semibold text-neutral-900 mb-1 truncate">{{ product.name }}</h3>
-            <p class="text-sm text-neutral-500 mb-2 line-clamp-2">{{ product.description }}</p>
-            
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="font-bold text-lg text-neutral-900">${{ product.price }}</div>
-                <div class="text-xs text-neutral-500">{{ product.category }}</div>
-              </div>
-              
-              <div class="text-right">
-                <div class="text-sm font-medium text-neutral-700">{{ product.stock }} in stock</div>
-                <div class="text-xs text-neutral-500">{{ product.sales }} sold</div>
-              </div>
-            </div>
+              Apply Filters
+            </BaseButton>
           </div>
         </BaseCard>
+      </Transition>
+      
+      <!-- Loading State -->
+      <div v-if="isLoading && products.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <ProductCardSkeleton v-for="i in 8" :key="i" />
+      </div>
+      
+      <!-- Products Grid -->
+      <div v-else-if="products.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <ProductCard
+          v-for="product in products"
+          :key="product._id"
+          :product="product"
+          @edit="editProduct"
+          @delete="confirmDeleteProduct"
+          @view="viewProduct"
+        />
       </div>
       
       <!-- Empty State -->
-      <div v-if="filteredProducts.length === 0" class="text-center py-12">
+      <div v-else class="text-center py-12">
         <BaseIcon name="shopping-bag" size="xl" class="mx-auto text-neutral-300 mb-4" />
-        <h3 class="text-lg font-medium text-neutral-900 mb-2">No products found</h3>
-        <p class="text-neutral-500 mb-4">Get started by creating your first product</p>
-        <BaseButton variant="primary" icon="plus" @click="showCreateModal = true">
+        <h3 class="text-lg font-medium text-neutral-900 mb-2">
+          {{ hasActiveFilters ? 'No products match your filters' : 'No products found' }}
+        </h3>
+        <p class="text-neutral-500 mb-4">
+          {{ hasActiveFilters ? 'Try adjusting your search criteria' : 'Get started by creating your first product' }}
+        </p>
+        <BaseButton 
+          v-if="!hasActiveFilters"
+          variant="primary" 
+          icon="plus" 
+          @click="createProduct"
+        >
           Add Product
         </BaseButton>
+        <BaseButton 
+          v-else
+          variant="secondary" 
+          @click="clearFilters"
+        >
+          Clear Filters
+        </BaseButton>
+      </div>
+      
+      <!-- Pagination -->
+      <div v-if="totalPages > 1" class="flex justify-center">
+        <BasePagination
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          :total-items="totalProducts"
+          @page-change="handlePageChange"
+        />
       </div>
     </div>
     
-    <!-- Create/Edit Modal -->
-    <BaseModal
-      :show="showCreateModal"
-      title="Add New Product"
-      size="xl"
-      @close="showCreateModal = false"
-    >
-      <form @submit.prevent="saveProduct" class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <BaseInput
-            v-model="productForm.name"
-            label="Product Name"
-            placeholder="Enter product name"
-            required
-          />
-          
-          <BaseSelect
-            v-model="productForm.category"
-            label="Category"
-            placeholder="Select category"
-            :options="categoryOptions"
-            required
-          />
-        </div>
-        
-        <BaseInput
-          v-model="productForm.description"
-          label="Description"
-          placeholder="Product description"
-          type="textarea"
-        />
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <BaseInput
-            v-model="productForm.price"
-            type="number"
-            label="Price"
-            placeholder="0.00"
-            required
-          />
-          
-          <BaseInput
-            v-model="productForm.stock"
-            type="number"
-            label="Stock Quantity"
-            placeholder="0"
-            required
-          />
-          
-          <BaseSelect
-            v-model="productForm.status"
-            label="Status"
-            :options="statusOptions"
-            required
-          />
-        </div>
-      </form>
-      
-      <template #footer>
-        <BaseButton variant="ghost" @click="showCreateModal = false">
-          Cancel
-        </BaseButton>
-        <BaseButton variant="primary" @click="saveProduct">
-          Save Product
-        </BaseButton>
-      </template>
-    </BaseModal>
+    <!-- Product Form Modal -->
+    <ProductFormModal
+      :show="showProductModal"
+      :product="selectedProduct"
+      :mode="modalMode"
+      @close="closeProductModal"
+      @save="handleProductSave"
+    />
+    
+    <!-- Delete Confirmation Modal -->
+    <ConfirmDialog
+      :show="showDeleteDialog"
+      :title="`Delete ${productToDelete?.name}?`"
+      message="This action cannot be undone. The product will be permanently removed from your catalog."
+      confirm-text="Delete Product"
+      confirm-variant="danger"
+      @confirm="deleteProduct"
+      @cancel="closeDeleteDialog"
+    />
   </AdminLayout>
 </template>
 
 <script>
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useToast } from 'vue-toastification'
+import { useAuthStore } from '../stores/auth.js'
+import { useProductValidation } from '../composables/useValidation.js'
+import adminService from '../services/adminService.js'
+import { debounce } from 'lodash.debounce'
+
+// Import components
 import AdminLayout from '../layouts/AdminLayout.vue'
 import BaseCard from '../components/base/BaseCard.vue'
 import BaseButton from '../components/base/BaseButton.vue'
 import BaseInput from '../components/base/BaseInput.vue'
 import BaseSelect from '../components/base/BaseSelect.vue'
-import BaseModal from '../components/base/BaseModal.vue'
 import BaseIcon from '../components/base/BaseIcon.vue'
-import BaseBadge from '../components/base/BaseBadge.vue'
+import ProductCard from '../components/ProductCard.vue'
+import ProductCardSkeleton from '../components/ProductCardSkeleton.vue'
+import ProductFormModal from '../components/ProductFormModal.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
+import BasePagination from '../components/base/BasePagination.vue'
 
 export default {
   name: 'AdminProducts',
@@ -217,121 +178,302 @@ export default {
     BaseButton,
     BaseInput,
     BaseSelect,
-    BaseModal,
     BaseIcon,
-    BaseBadge
+    ProductCard,
+    ProductCardSkeleton,
+    ProductFormModal,
+    ConfirmDialog,
+    BasePagination
   },
-  data() {
-    return {
-      showCreateModal: false,
-      filters: {
+  setup() {
+    const router = useRouter()
+    const toast = useToast()
+    const authStore = useAuthStore()
+    
+    // State
+    const products = ref([])
+    const categories = ref([])
+    const isLoading = ref(false)
+    const categoriesLoading = ref(false)
+    const showFilters = ref(false)
+    const showProductModal = ref(false)
+    const showDeleteDialog = ref(false)
+    const selectedProduct = ref(null)
+    const productToDelete = ref(null)
+    const modalMode = ref('create') // 'create' | 'edit' | 'view'
+    
+    // Pagination
+    const currentPage = ref(1)
+    const itemsPerPage = ref(12)
+    const totalProducts = ref(0)
+    const totalPages = computed(() => Math.ceil(totalProducts.value / itemsPerPage.value))
+    
+    // Filters
+    const filters = ref({
+      search: '',
+      category: '',
+      status: ''
+    })
+    
+    const statusOptions = [
+      { value: '', label: 'All Status' },
+      { value: 'active', label: 'Active' },
+      { value: 'inactive', label: 'Inactive' },
+      { value: 'draft', label: 'Draft' },
+      { value: 'out_of_stock', label: 'Out of Stock' }
+    ]
+    
+    const categoryOptions = computed(() => [
+      { value: '', label: 'All Categories' },
+      ...categories.value.map(cat => ({
+        value: cat._id,
+        label: cat.name
+      }))
+    ])
+    
+    const hasActiveFilters = computed(() => {
+      return filters.value.search || filters.value.category || filters.value.status
+    })
+    
+    // Methods
+    const fetchProducts = async () => {
+      try {
+        isLoading.value = true
+        
+        const queryParams = {
+          page: currentPage.value,
+          limit: itemsPerPage.value,
+          ...filters.value
+        }
+        
+        // Remove empty filters
+        Object.keys(queryParams).forEach(key => {
+          if (queryParams[key] === '' || queryParams[key] === null) {
+            delete queryParams[key]
+          }
+        })
+        
+        const response = await adminService.getProducts(queryParams)
+        
+        if (response.success) {
+          products.value = response.data.products || response.data
+          totalProducts.value = response.data.total || products.value.length
+        }
+      } catch (error) {
+        console.error('Failed to fetch products:', error)
+        toast.error('Failed to load products')
+        products.value = []
+      } finally {
+        isLoading.value = false
+      }
+    }
+    
+    const fetchCategories = async () => {
+      try {
+        categoriesLoading.value = true
+        const response = await adminService.getCategories()
+        
+        if (response.success) {
+          categories.value = response.data || []
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error)
+        categories.value = []
+      } finally {
+        categoriesLoading.value = false
+      }
+    }
+    
+    const createProduct = () => {
+      selectedProduct.value = null
+      modalMode.value = 'create'
+      showProductModal.value = true
+    }
+    
+    const editProduct = (product) => {
+      selectedProduct.value = { ...product }
+      modalMode.value = 'edit'
+      showProductModal.value = true
+    }
+    
+    const viewProduct = (product) => {
+      selectedProduct.value = product
+      modalMode.value = 'view'
+      showProductModal.value = true
+    }
+    
+    const confirmDeleteProduct = (product) => {
+      productToDelete.value = product
+      showDeleteDialog.value = true
+    }
+    
+    const deleteProduct = async () => {
+      try {
+        if (!productToDelete.value) return
+        
+        await adminService.deleteProduct(productToDelete.value._id)
+        
+        // Remove from local array
+        products.value = products.value.filter(p => p._id !== productToDelete.value._id)
+        totalProducts.value--
+        
+        toast.success('Product deleted successfully')
+        closeDeleteDialog()
+        
+      } catch (error) {
+        console.error('Failed to delete product:', error)
+        toast.error(error.message || 'Failed to delete product')
+      }
+    }
+    
+    const handleProductSave = async (productData) => {
+      try {
+        let response
+        
+        if (modalMode.value === 'create') {
+          response = await adminService.createProduct(productData)
+          if (response.success) {
+            products.value.unshift(response.data)
+            totalProducts.value++
+            toast.success('Product created successfully')
+          }
+        } else if (modalMode.value === 'edit') {
+          response = await adminService.updateProduct(selectedProduct.value._id, productData)
+          if (response.success) {
+            // Update in local array
+            const index = products.value.findIndex(p => p._id === selectedProduct.value._id)
+            if (index !== -1) {
+              products.value[index] = response.data
+            }
+            toast.success('Product updated successfully')
+          }
+        }
+        
+        closeProductModal()
+      } catch (error) {
+        console.error('Failed to save product:', error)
+        toast.error(error.message || 'Failed to save product')
+        throw error // Re-throw to let modal handle it
+      }
+    }
+    
+    const closeProductModal = () => {
+      showProductModal.value = false
+      selectedProduct.value = null
+      modalMode.value = 'create'
+    }
+    
+    const closeDeleteDialog = () => {
+      showDeleteDialog.value = false
+      productToDelete.value = null
+    }
+    
+    const applyFilters = async () => {
+      currentPage.value = 1 // Reset to first page
+      await fetchProducts()
+    }
+    
+    const clearFilters = () => {
+      filters.value = {
         search: '',
         category: '',
         status: ''
-      },
-      productForm: {
-        name: '',
-        description: '',
-        category: '',
-        price: '',
-        stock: '',
-        status: 'active'
-      },
-      products: [
-        {
-          id: 1,
-          name: 'Wireless Headphones',
-          description: 'High-quality wireless headphones with noise cancellation',
-          category: 'Electronics',
-          price: 299.99,
-          stock: 25,
-          sales: 156,
-          status: 'active',
-          image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop&crop=center'
-        },
-        {
-          id: 2,
-          name: 'Smart Watch',
-          description: 'Feature-rich smartwatch with health monitoring',
-          category: 'Electronics',
-          price: 199.99,
-          stock: 42,
-          sales: 203,
-          status: 'active',
-          image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop&crop=center'
-        },
-        {
-          id: 3,
-          name: 'Coffee Mug',
-          description: 'Premium ceramic coffee mug',
-          category: 'Home & Kitchen',
-          price: 24.99,
-          stock: 0,
-          sales: 89,
-          status: 'out_of_stock'
-        }
-      ],
-      categoryOptions: [
-        { value: 'electronics', label: 'Electronics' },
-        { value: 'clothing', label: 'Clothing' },
-        { value: 'home_kitchen', label: 'Home & Kitchen' },
-        { value: 'books', label: 'Books' },
-        { value: 'sports', label: 'Sports & Outdoors' }
-      ],
-      statusOptions: [
-        { value: 'active', label: 'Active' },
-        { value: 'draft', label: 'Draft' },
-        { value: 'out_of_stock', label: 'Out of Stock' },
-        { value: 'discontinued', label: 'Discontinued' }
-      ]
-    }
-  },
-  computed: {
-    filteredProducts() {
-      return this.products.filter(product => {
-        const matchesSearch = !this.filters.search || 
-          product.name.toLowerCase().includes(this.filters.search.toLowerCase()) ||
-          product.description.toLowerCase().includes(this.filters.search.toLowerCase())
-        
-        const matchesCategory = !this.filters.category || 
-          product.category.toLowerCase() === this.filters.category.toLowerCase()
-        
-        const matchesStatus = !this.filters.status || product.status === this.filters.status
-        
-        return matchesSearch && matchesCategory && matchesStatus
-      })
-    }
-  },
-  methods: {
-    applyFilters() {
-      // Filters are reactive, so this just serves as a trigger
-      console.log('Applying filters:', this.filters)
-    },
-    
-    editProduct(product) {
-      this.productForm = { ...product }
-      this.showCreateModal = true
-    },
-    
-    deleteProduct(productId) {
-      if (confirm('Are you sure you want to delete this product?')) {
-        this.products = this.products.filter(p => p.id !== productId)
       }
-    },
+      applyFilters()
+    }
     
-    saveProduct() {
-      // Implement save logic
-      console.log('Saving product:', this.productForm)
-      this.showCreateModal = false
-      this.productForm = {
-        name: '',
-        description: '',
-        category: '',
-        price: '',
-        stock: '',
-        status: 'active'
+    const handlePageChange = (page) => {
+      currentPage.value = page
+      fetchProducts()
+    }
+    
+    // Debounced search
+    const debouncedSearch = debounce(() => {
+      applyFilters()
+    }, 500)
+    
+    // Lifecycle
+    onMounted(async () => {
+      await Promise.all([
+        fetchProducts(),
+        fetchCategories()
+      ])
+    })
+    
+    // Watch for filter changes
+    watch(
+      () => [filters.value.category, filters.value.status],
+      () => {
+        applyFilters()
       }
+    )
+    
+    return {
+      // State
+      products,
+      categories,
+      isLoading,
+      categoriesLoading,
+      showFilters,
+      showProductModal,
+      showDeleteDialog,
+      selectedProduct,
+      productToDelete,
+      modalMode,
+      
+      // Pagination
+      currentPage,
+      totalProducts,
+      totalPages,
+      
+      // Filters
+      filters,
+      statusOptions,
+      categoryOptions,
+      hasActiveFilters,
+      
+      // Store
+      authStore,
+      
+      // Methods
+      createProduct,
+      editProduct,
+      viewProduct,
+      confirmDeleteProduct,
+      deleteProduct,
+      handleProductSave,
+      closeProductModal,
+      closeDeleteDialog,
+      applyFilters,
+      clearFilters,
+      handlePageChange,
+      debouncedSearch
     }
   }
 }
 </script>
+
+<style scoped>
+/* Transition animations */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-down-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Grid responsive adjustments */
+@media (max-width: 640px) {
+  .grid-cols-1 {
+    @apply gap-4;
+  }
+}
+</style>
