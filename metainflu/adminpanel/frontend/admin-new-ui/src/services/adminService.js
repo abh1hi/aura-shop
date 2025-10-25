@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios'
-import Joi from 'joi'
+import * as yup from 'yup'
 import DOMPurify from 'dompurify'
 
 class AdminService {
@@ -82,111 +82,113 @@ class AdminService {
     )
   }
 
-  // Validation schemas
+  // Validation schemas using Yup
   static validationSchemas = {
-    product: Joi.object({
-      name: Joi.string()
-        .min(3)
-        .max(100)
-        .pattern(/^[a-zA-Z0-9\s\-_.'"]+$/)
-        .required()
-        .messages({
-          'string.pattern.base': 'Product name contains invalid characters',
-          'string.min': 'Product name must be at least 3 characters',
-          'string.max': 'Product name cannot exceed 100 characters'
-        }),
-      description: Joi.string()
-        .max(1000)
-        .allow('')
-        .messages({
-          'string.max': 'Description cannot exceed 1000 characters'
-        }),
-      brand: Joi.string()
-        .max(50)
-        .allow('')
-        .pattern(/^[a-zA-Z0-9\s\-_.'"]*$/)
-        .messages({
-          'string.pattern.base': 'Brand name contains invalid characters'
-        }),
-      price: Joi.number()
-        .positive()
-        .precision(2)
-        .max(999999.99)
-        .required()
-        .messages({
-          'number.positive': 'Price must be positive',
-          'number.max': 'Price cannot exceed $999,999.99'
-        }),
-      stock: Joi.number()
-        .integer()
-        .min(0)
-        .max(999999)
-        .required()
-        .messages({
-          'number.min': 'Stock cannot be negative',
-          'number.max': 'Stock cannot exceed 999,999'
-        }),
-      category: Joi.string()
-        .pattern(/^[0-9a-fA-F]{24}$/)
-        .required()
-        .messages({
-          'string.pattern.base': 'Invalid category ID format'
-        }),
-      tags: Joi.array()
-        .items(Joi.string().max(50).pattern(/^[a-zA-Z0-9\s\-_]+$/)).max(10)
+    product: yup.object().shape({
+      name: yup
+        .string()
+        .min(3, 'Product name must be at least 3 characters')
+        .max(100, 'Product name cannot exceed 100 characters')
+        .matches(/^[a-zA-Z0-9\s\-_.'\'"]+$/, 'Product name contains invalid characters')
+        .required('Product name is required'),
+      description: yup
+        .string()
+        .max(1000, 'Description cannot exceed 1000 characters')
+        .nullable(),
+      brand: yup
+        .string()
+        .max(50, 'Brand name cannot exceed 50 characters')
+        .matches(/^[a-zA-Z0-9\s\-_.'\'"]*$/, 'Brand name contains invalid characters')
+        .nullable(),
+      price: yup
+        .number()
+        .positive('Price must be positive')
+        .max(999999.99, 'Price cannot exceed $999,999.99')
+        .required('Price is required'),
+      stock: yup
+        .number()
+        .integer('Stock must be a whole number')
+        .min(0, 'Stock cannot be negative')
+        .max(999999, 'Stock cannot exceed 999,999')
+        .required('Stock is required'),
+      category: yup
+        .string()
+        .matches(/^[0-9a-fA-F]{24}$/, 'Invalid category ID format')
+        .required('Category is required'),
+      tags: yup
+        .array()
+        .of(
+          yup
+            .string()
+            .max(50, 'Tag cannot exceed 50 characters')
+            .matches(/^[a-zA-Z0-9\s\-_]+$/, 'Tag contains invalid characters')
+        )
+        .max(10, 'Cannot have more than 10 tags')
         .default([])
     }),
 
-    category: Joi.object({
-      name: Joi.string()
-        .min(2)
-        .max(50)
-        .pattern(/^[a-zA-Z0-9\s\-]+$/)
-        .required()
-        .messages({
-          'string.pattern.base': 'Category name can only contain letters, numbers, spaces, and hyphens'
-        }),
-      description: Joi.string().max(200).allow(''),
-      parentId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).allow(''),
-      status: Joi.string().valid('active', 'inactive').default('active')
+    category: yup.object().shape({
+      name: yup
+        .string()
+        .min(2, 'Category name must be at least 2 characters')
+        .max(50, 'Category name cannot exceed 50 characters')
+        .matches(/^[a-zA-Z0-9\s\-]+$/, 'Category name can only contain letters, numbers, spaces, and hyphens')
+        .required('Category name is required'),
+      description: yup
+        .string()
+        .max(200, 'Description cannot exceed 200 characters')
+        .nullable(),
+      parentId: yup
+        .string()
+        .matches(/^[0-9a-fA-F]{24}$/, 'Invalid parent category ID format')
+        .nullable(),
+      status: yup
+        .string()
+        .oneOf(['active', 'inactive'], 'Status must be active or inactive')
+        .default('active')
     }),
 
-    user: Joi.object({
-      name: Joi.string()
-        .min(2)
-        .max(50)
-        .pattern(/^[a-zA-Z\s]+$/)
-        .required(),
-      email: Joi.string().email().max(100).required(),
-      role: Joi.string().valid('user', 'vendor', 'admin').required(),
-      isActive: Joi.boolean().default(true)
+    user: yup.object().shape({
+      name: yup
+        .string()
+        .min(2, 'Name must be at least 2 characters')
+        .max(50, 'Name cannot exceed 50 characters')
+        .matches(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces')
+        .required('Name is required'),
+      email: yup
+        .string()
+        .email('Invalid email format')
+        .max(100, 'Email cannot exceed 100 characters')
+        .required('Email is required'),
+      role: yup
+        .string()
+        .oneOf(['user', 'vendor', 'admin'], 'Invalid role')
+        .required('Role is required'),
+      isActive: yup
+        .boolean()
+        .default(true)
     })
   }
 
-  // Data validation
-  validateData(data, schemaName) {
+  // Data validation using Yup
+  async validateData(data, schemaName) {
     const schema = AdminService.validationSchemas[schemaName]
     if (!schema) {
       throw new Error(`Validation schema '${schemaName}' not found`)
     }
 
-    const { error, value } = schema.validate(data, {
-      abortEarly: false,
-      stripUnknown: true
-    })
-
-    if (error) {
+    try {
+      const validatedData = await schema.validate(data, {
+        abortEarly: false,
+        stripUnknown: true
+      })
+      return validatedData
+    } catch (error) {
       const validationError = new Error('Validation failed')
       validationError.name = 'ValidationError'
-      validationError.details = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message,
-        type: detail.type
-      }))
+      validationError.details = error.errors || [error.message]
       throw validationError
     }
-
-    return value
   }
 
   // Data sanitization
@@ -351,7 +353,7 @@ class AdminService {
   async createProduct(productData) {
     try {
       // Client-side validation
-      const validatedData = this.validateData(productData, 'product')
+      const validatedData = await this.validateData(productData, 'product')
       
       const response = await this.api.post('/admin/products', validatedData)
       return response.data
@@ -363,7 +365,7 @@ class AdminService {
   async updateProduct(id, productData) {
     try {
       // Client-side validation (partial update)
-      const validatedData = this.validateData(productData, 'product')
+      const validatedData = await this.validateData(productData, 'product')
       
       const response = await this.api.put(`/admin/products/${id}`, validatedData)
       return response.data
@@ -393,7 +395,7 @@ class AdminService {
 
   async createCategory(categoryData) {
     try {
-      const validatedData = this.validateData(categoryData, 'category')
+      const validatedData = await this.validateData(categoryData, 'category')
       const response = await this.api.post('/admin/categories', validatedData)
       return response.data
     } catch (error) {
@@ -403,7 +405,7 @@ class AdminService {
 
   async updateCategory(id, categoryData) {
     try {
-      const validatedData = this.validateData(categoryData, 'category')
+      const validatedData = await this.validateData(categoryData, 'category')
       const response = await this.api.put(`/admin/categories/${id}`, validatedData)
       return response.data
     } catch (error) {
@@ -434,7 +436,7 @@ class AdminService {
 
   async updateUser(id, userData) {
     try {
-      const validatedData = this.validateData(userData, 'user')
+      const validatedData = await this.validateData(userData, 'user')
       const response = await this.api.put(`/admin/users/${id}`, validatedData)
       return response.data
     } catch (error) {
