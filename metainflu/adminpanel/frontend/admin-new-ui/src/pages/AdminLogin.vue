@@ -144,7 +144,24 @@
       </BaseCard>
       
       <!-- Footer -->
-      <div class="text-center mt-8">
+      <div class="text-center mt-8 space-y-4">
+        <!-- Registration Link -->
+        <div class="p-4 bg-white rounded-lg border border-neutral-200">
+          <p class="text-sm text-neutral-600 mb-2">
+            Don't have an account?
+          </p>
+          <router-link 
+            to="/register" 
+            class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 hover:text-primary-700 transition-colors duration-200"
+          >
+            Create Account
+          </router-link>
+          <p class="text-xs text-neutral-500 mt-2">
+            New accounts are created as 'user' role by default
+          </p>
+        </div>
+        
+        <!-- Support Link -->
         <p class="text-sm text-neutral-500">
           Having trouble signing in?
           <a href="mailto:support@aurashop.com" class="text-primary-600 hover:text-primary-700 font-medium">
