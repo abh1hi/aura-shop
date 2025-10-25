@@ -1,7 +1,7 @@
 
 import api from './api';
 
-const API_URL = 'https://3czzqk3l-5000.use2.devtunnels.ms/api/auth/';
+const API_URL = 'https://weary-spooky-cape-r47p7p6ggvvv3xxrq-5000.app.github.dev/api/auth/';
 
 const register = async (userData) => {
   const data = await api(API_URL + 'register', {

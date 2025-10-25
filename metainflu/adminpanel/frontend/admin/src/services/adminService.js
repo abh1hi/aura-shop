@@ -4,7 +4,7 @@
   users, getting products, and creating new products, including authentication headers.
 */
 
-const API_URL = 'http://localhost:5000/api/';
+const API_URL = 'https://weary-spooky-cape-r47p7p6ggvvv3xxrq-5000.app.github.dev/api/';
 
 // Helper function to retrieve the admin token from localStorage.
 const getToken = () => {
