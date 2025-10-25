@@ -5,7 +5,7 @@ const asyncHandler = require('express-async-handler');
 // @route   GET /api/categories
 // @access  Public
 const getCategories = asyncHandler(async (req, res) => {
-  const categories = await Category.find({ status: 'approved' });
+  const categories = await Category.find({ status: 'approved' }).populate('parentCategory');
   res.json(categories);
 });
 
@@ -13,7 +13,7 @@ const getCategories = asyncHandler(async (req, res) => {
 // @route   GET /api/categories/:id
 // @access  Public
 const getCategoryById = asyncHandler(async (req, res) => {
-  const category = await Category.findById(req.params.id);
+  const category = await Category.findById(req.params.id).populate('parentCategory');
 
   if (category) {
     res.json(category);
@@ -27,11 +27,12 @@ const getCategoryById = asyncHandler(async (req, res) => {
 // @route   POST /api/categories
 // @access  Private/Admin
 const createCategory = asyncHandler(async (req, res) => {
-  const { name, imageUrl } = req.body;
+  const { name, imageUrl, parentCategory } = req.body;
 
   const category = new Category({
     name,
     imageUrl,
+    parentCategory,
   });
 
   const createdCategory = await category.save();
@@ -42,13 +43,14 @@ const createCategory = asyncHandler(async (req, res) => {
 // @route   PUT /api/categories/:id
 // @access  Private/Admin
 const updateCategory = asyncHandler(async (req, res) => {
-  const { name, imageUrl } = req.body;
+  const { name, imageUrl, parentCategory } = req.body;
 
   const category = await Category.findById(req.params.id);
 
   if (category) {
     category.name = name;
     category.imageUrl = imageUrl;
+    category.parentCategory = parentCategory;
 
     const updatedCategory = await category.save();
     res.json(updatedCategory);

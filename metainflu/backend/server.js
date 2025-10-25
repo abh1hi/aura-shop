@@ -17,6 +17,7 @@ const cartRoutes = require('./routes/cartRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const vendorRoutes = require('./routes/vendorRoutes'); // Import vendor routes
 const homeRoutes = require('./routes/homeRoutes'); // Import home routes
+const parentCategoryRoutes = require('./routes/parentCategoryRoutes');
 
 const { errorHandler } = require('./middleware/errorMiddleware');
 const { protect } = require('./middleware/authMiddleware');
@@ -111,6 +112,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes); 
 app.use('/api/vendor', vendorRoutes); // Use new vendor routes
 app.use('/api/home', homeRoutes);
+app.use('/api/parent-categories', parentCategoryRoutes);
 
 // Test protected route
 app.get('/api/protected', protect, (req, res) => {

@@ -6,6 +6,11 @@ const categorySchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  parentCategory: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ParentCategory',
+    required: true,
+  },
   status: {
     type: String,
     enum: ['pending', 'approved'],
