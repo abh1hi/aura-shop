@@ -4,7 +4,7 @@
  */
 
 import adminService from './adminService.js'
-import Joi from 'joi'
+import Validator, { ValidationError } from '../utils/validation.js'
 
 class AuthService {
   constructor() {
@@ -27,88 +27,50 @@ class AuthService {
     }
   }
 
-  // Validation schemas
+  // Validation schemas using built-in validator
   static validationSchemas = {
-    login: Joi.object({
-      email: Joi.string()
-        .email({ tlds: { allow: false } })
-        .max(100)
-        .required()
-        .messages({
-          'string.email': 'Please enter a valid email address',
-          'string.empty': 'Email is required'
-        }),
-      password: Joi.string()
-        .min(1)
-        .required()
-        .messages({
-          'string.empty': 'Password is required'
-        })
+    login: Validator.object({
+      email: Validator.string()
+        .email('Please enter a valid email address')
+        .max(100, 'Email cannot exceed 100 characters')
+        .required('Email is required'),
+      password: Validator.string()
+        .required('Password is required')
     }),
 
-    register: Joi.object({
-      name: Joi.string()
-        .min(2)
-        .max(50)
-        .pattern(/^[a-zA-Z\s]+$/)
-        .required()
-        .messages({
-          'string.pattern.base': 'Name can only contain letters and spaces',
-          'string.min': 'Name must be at least 2 characters',
-          'string.max': 'Name cannot exceed 50 characters'
-        }),
-      email: Joi.string()
-        .email({ tlds: { allow: false } })
-        .max(100)
-        .required(),
-      password: Joi.string()
-        .min(8)
-        .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-        .required()
-        .messages({
-          'string.min': 'Password must be at least 8 characters',
-          'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-        }),
-      confirmPassword: Joi.string()
-        .valid(Joi.ref('password'))
-        .required()
-        .messages({
-          'any.only': 'Passwords do not match'
-        }),
-      termsAccepted: Joi.boolean()
-        .valid(true)
-        .required()
-        .messages({
-          'any.only': 'You must accept the terms and conditions'
-        }),
-      privacyPolicyAccepted: Joi.boolean()
-        .valid(true)
-        .required()
-        .messages({
-          'any.only': 'You must accept the privacy policy'
-        })
+    register: Validator.object({
+      name: Validator.string()
+        .min(2, 'Name must be at least 2 characters')
+        .max(50, 'Name cannot exceed 50 characters')
+        .matches(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces')
+        .required('Name is required'),
+      email: Validator.string()
+        .email('Please enter a valid email address')
+        .max(100, 'Email cannot exceed 100 characters')
+        .required('Email is required'),
+      password: Validator.string()
+        .min(8, 'Password must be at least 8 characters')
+        .matches(
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+          'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+        )
+        .required('Password is required'),
+      termsAccepted: Validator.boolean()
+        .required('You must accept the terms and conditions'),
+      privacyPolicyAccepted: Validator.boolean()
+        .required('You must accept the privacy policy')
     }),
 
-    changePassword: Joi.object({
-      currentPassword: Joi.string()
-        .required()
-        .messages({
-          'string.empty': 'Current password is required'
-        }),
-      newPassword: Joi.string()
-        .min(8)
-        .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-        .required()
-        .messages({
-          'string.min': 'New password must be at least 8 characters',
-          'string.pattern.base': 'New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-        }),
-      confirmNewPassword: Joi.string()
-        .valid(Joi.ref('newPassword'))
-        .required()
-        .messages({
-          'any.only': 'Password confirmation does not match'
-        })
+    changePassword: Validator.object({
+      currentPassword: Validator.string()
+        .required('Current password is required'),
+      newPassword: Validator.string()
+        .min(8, 'New password must be at least 8 characters')
+        .matches(
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+          'New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+        )
+        .required('New password is required')
     })
   }
 
@@ -119,23 +81,44 @@ class AuthService {
       throw new Error(`Validation schema '${schemaName}' not found`)
     }
 
-    const { error, value } = schema.validate(data, {
-      abortEarly: false,
-      stripUnknown: true
-    })
-
-    if (error) {
-      const validationError = new Error('Validation failed')
-      validationError.name = 'ValidationError'
-      validationError.details = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message,
-        type: detail.type
-      }))
+    const result = schema.validate(data)
+    
+    if (!result.isValid) {
+      const validationError = new ValidationError('Validation failed')
+      validationError.details = result.errors || [{ field: 'root', message: result.error }]
       throw validationError
     }
 
-    return value
+    return result.value
+  }
+
+  // Validate password strength
+  validatePassword(password) {
+    const errors = []
+    
+    if (password.length < 8) {
+      errors.push('Password must be at least 8 characters')
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter')
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter')
+    }
+    if (!/\d/.test(password)) {
+      errors.push('Password must contain at least one number')
+    }
+    if (!/[@$!%*?&]/.test(password)) {
+      errors.push('Password must contain at least one special character (@$!%*?&)')
+    }
+    
+    return errors
+  }
+
+  // Validate email format
+  validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
   }
 
   // Login methods
@@ -230,24 +213,42 @@ class AuthService {
   // Registration
   async register(userData) {
     try {
-      const validatedData = this.validateCredentials(userData, 'register')
+      // Validate email
+      if (!this.validateEmail(userData.email)) {
+        throw new ValidationError('Invalid email format')
+      }
+
+      // Validate password
+      const passwordErrors = this.validatePassword(userData.password)
+      if (passwordErrors.length > 0) {
+        throw new ValidationError('Password validation failed', passwordErrors.map(error => ({ field: 'password', message: error })))
+      }
+
+      // Validate password confirmation
+      if (userData.password !== userData.confirmPassword) {
+        throw new ValidationError('Passwords do not match')
+      }
+
+      // Validate required fields
+      if (!userData.name || userData.name.trim().length < 2) {
+        throw new ValidationError('Name must be at least 2 characters')
+      }
+
+      if (!userData.termsAccepted) {
+        throw new ValidationError('You must accept the terms and conditions')
+      }
+
+      if (!userData.privacyPolicyAccepted) {
+        throw new ValidationError('You must accept the privacy policy')
+      }
       
       // Remove confirmPassword before sending to server
-      const { confirmPassword, ...registrationData } = validatedData
+      const { confirmPassword, ...registrationData } = userData
       
       const response = await adminService.api.post('/auth/register', registrationData)
       
-      if (response.data.success && response.data.tokens) {
-        adminService.setTokens(
-          response.data.tokens.accessToken,
-          response.data.tokens.refreshToken
-        )
-        
-        this.user = response.data.user
-        this.isAuthenticated = true
-        
-        await adminService.fetchCSRFToken()
-        
+      if (response.data.success) {
+        // Don't auto-login for registration, let them login manually
         return response.data
       }
       
@@ -336,14 +337,20 @@ class AuthService {
   // Change password
   async changePassword(passwordData) {
     try {
-      const validatedData = this.validateCredentials(passwordData, 'changePassword')
-      
-      // Remove confirmNewPassword before sending to server
-      const { confirmNewPassword, ...changeData } = validatedData
+      // Validate new password
+      const passwordErrors = this.validatePassword(passwordData.newPassword)
+      if (passwordErrors.length > 0) {
+        throw new ValidationError('Password validation failed', passwordErrors.map(error => ({ field: 'newPassword', message: error })))
+      }
+
+      // Validate password confirmation
+      if (passwordData.newPassword !== passwordData.confirmNewPassword) {
+        throw new ValidationError('Password confirmation does not match')
+      }
       
       const response = await adminService.api.post('/auth/change-password', {
-        currentPassword: changeData.currentPassword,
-        newPassword: changeData.newPassword
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
       })
       
       return response.data
@@ -356,8 +363,7 @@ class AuthService {
   // Password reset
   async requestPasswordReset(email) {
     try {
-      const { error } = Joi.string().email().validate(email)
-      if (error) {
+      if (!this.validateEmail(email)) {
         throw new Error('Please provide a valid email address')
       }
       
@@ -371,14 +377,9 @@ class AuthService {
 
   async resetPassword(token, newPassword) {
     try {
-      const passwordSchema = Joi.string()
-        .min(8)
-        .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-        .required()
-      
-      const { error } = passwordSchema.validate(newPassword)
-      if (error) {
-        throw new Error('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character')
+      const passwordErrors = this.validatePassword(newPassword)
+      if (passwordErrors.length > 0) {
+        throw new ValidationError('Password validation failed', passwordErrors.map(error => ({ field: 'password', message: error })))
       }
       
       const response = await adminService.api.post('/auth/reset-password', {
