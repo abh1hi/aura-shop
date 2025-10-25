@@ -133,14 +133,21 @@
         <section class="new-arrivals">
           <div class="section-header">
             <h3>New Arrivals</h3>
-            <router-link to="/shop" class="see-all">Shop Now</router-link>
+            <div class="header-controls">
+              <div class="view-toggle">
+                <button :class="{ active: newArrivalsView === 'grid' }" @click="newArrivalsView = 'grid'"><i class="fas fa-th"></i></button>
+                <button :class="{ active: newArrivalsView === 'list' }" @click="newArrivalsView = 'list'"><i class="fas fa-bars"></i></button>
+              </div>
+              <router-link to="/shop" class="see-all">Shop Now</router-link>
+            </div>
           </div>
-          <div class="desktop-products-grid">
+          <div :class="newArrivalsView === 'grid' ? 'desktop-products-grid' : 'desktop-products-list'">
             <ProductCard
               v-for="product in newArrivals"
               :key="product.key"
               :product="product"
               :mobile="false"
+              :class="{ 'desktop-carousel-card': newArrivalsView === 'list' }"
               @click="goToProduct(product)"
             />
           </div>
@@ -162,14 +169,21 @@
         <section class="trending-products">
           <div class="section-header">
             <h3>Trending Now</h3>
-            <router-link to="/shop?sort=trending" class="see-all">View All</router-link>
+            <div class="header-controls">
+              <div class="view-toggle">
+                <button :class="{ active: trendingProductsView === 'grid' }" @click="trendingProductsView = 'grid'"><i class="fas fa-th"></i></button>
+                <button :class="{ active: trendingProductsView === 'list' }" @click="trendingProductsView = 'list'"><i class="fas fa-bars"></i></button>
+              </div>
+              <router-link to="/shop?sort=trending" class="see-all">View All</router-link>
+            </div>
           </div>
-          <div class="desktop-products-grid">
+          <div :class="trendingProductsView === 'grid' ? 'desktop-products-grid' : 'desktop-products-list'">
             <ProductCard
               v-for="product in trendingProducts"
               :key="product.key"
               :product="product"
               :mobile="false"
+              :class="{ 'desktop-carousel-card': trendingProductsView === 'list' }"
               @click="goToProduct(product)"
             />
           </div>
@@ -213,6 +227,8 @@ const touchStartX = ref(0)
 const touchEndX = ref(0)
 const swipeThreshold = 200 // Minimum swipe distance
 const viewMode = ref('list') // Add this line
+const newArrivalsView = ref('grid')
+const trendingProductsView = ref('grid')
 
 // Category tabs
 const categoryTabs = ref(['Limited', 'Recommended', 'New in', 'Trendy'])
@@ -700,6 +716,30 @@ onUnmounted(() => {
 .desktop-products-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.desktop-products-list {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none; /* For Firefox */
+  -ms-overflow-style: none;  /* For Internet Explorer and Edge */
+  padding-bottom: 1rem; /* To avoid content being cut off */
+}
+
+.desktop-products-list::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Opera */
+}
+
+.desktop-carousel-card {
+  flex-shrink: 0;
+  width: 280px;
+}
+
+.desktop-main-content .header-controls {
+  display: flex;
+  align-items: center;
   gap: 1.5rem;
 }
 
