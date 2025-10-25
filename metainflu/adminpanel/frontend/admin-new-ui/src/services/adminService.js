@@ -1,223 +1,513 @@
-// Enhanced admin service with modern API patterns
+/*
+ * Enhanced Admin Service with Comprehensive Security
+ * Includes client-side validation, sanitization, and secure token management
+ */
+
+import axios from 'axios'
+import Joi from 'joi'
+import DOMPurify from 'dompurify'
+
 class AdminService {
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
-    this.token = localStorage.getItem('admin_token')
-  }
-
-  // Set authentication token
-  setToken(token) {
-    this.token = token
-    localStorage.setItem('admin_token', token)
-  }
-
-  // Clear authentication token
-  clearToken() {
-    this.token = null
-    localStorage.removeItem('admin_token')
-  }
-
-  // Make authenticated API requests
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`
-    const config = {
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+    this.timeout = 10000
+    
+    // Create axios instance with interceptors
+    this.api = axios.create({
+      baseURL: this.baseURL,
+      timeout: this.timeout,
+      withCredentials: true,
       headers: {
-        'Content-Type': 'application/json',
-        ...(this.token && { Authorization: `Bearer ${this.token}` }),
-        ...options.headers
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    this.setupInterceptors()
+  }
+
+  setupInterceptors() {
+    // Request interceptor
+    this.api.interceptors.request.use(
+      (config) => {
+        // Add auth token
+        const token = this.getToken()
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`
+        }
+        
+        // Add CSRF token for state-changing requests
+        if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase())) {
+          const csrfToken = this.getCSRFToken()
+          if (csrfToken) {
+            config.headers['X-CSRF-Token'] = csrfToken
+          }
+        }
+        
+        // Sanitize request data
+        if (config.data) {
+          config.data = this.sanitizeData(config.data)
+        }
+        
+        return config
       },
-      ...options
+      (error) => Promise.reject(this.handleError(error))
+    )
+
+    // Response interceptor
+    this.api.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config
+        
+        // Handle token expiration
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true
+          
+          try {
+            await this.refreshToken()
+            // Retry original request with new token
+            const token = this.getToken()
+            if (token) {
+              originalRequest.headers.Authorization = `Bearer ${token}`
+            }
+            return this.api(originalRequest)
+          } catch (refreshError) {
+            this.handleAuthError()
+            return Promise.reject(refreshError)
+          }
+        }
+        
+        return Promise.reject(this.handleError(error))
+      }
+    )
+  }
+
+  // Validation schemas
+  static validationSchemas = {
+    product: Joi.object({
+      name: Joi.string()
+        .min(3)
+        .max(100)
+        .pattern(/^[a-zA-Z0-9\s\-_.'"]+$/)
+        .required()
+        .messages({
+          'string.pattern.base': 'Product name contains invalid characters',
+          'string.min': 'Product name must be at least 3 characters',
+          'string.max': 'Product name cannot exceed 100 characters'
+        }),
+      description: Joi.string()
+        .max(1000)
+        .allow('')
+        .messages({
+          'string.max': 'Description cannot exceed 1000 characters'
+        }),
+      brand: Joi.string()
+        .max(50)
+        .allow('')
+        .pattern(/^[a-zA-Z0-9\s\-_.'"]*$/)
+        .messages({
+          'string.pattern.base': 'Brand name contains invalid characters'
+        }),
+      price: Joi.number()
+        .positive()
+        .precision(2)
+        .max(999999.99)
+        .required()
+        .messages({
+          'number.positive': 'Price must be positive',
+          'number.max': 'Price cannot exceed $999,999.99'
+        }),
+      stock: Joi.number()
+        .integer()
+        .min(0)
+        .max(999999)
+        .required()
+        .messages({
+          'number.min': 'Stock cannot be negative',
+          'number.max': 'Stock cannot exceed 999,999'
+        }),
+      category: Joi.string()
+        .pattern(/^[0-9a-fA-F]{24}$/)
+        .required()
+        .messages({
+          'string.pattern.base': 'Invalid category ID format'
+        }),
+      tags: Joi.array()
+        .items(Joi.string().max(50).pattern(/^[a-zA-Z0-9\s\-_]+$/)).max(10)
+        .default([])
+    }),
+
+    category: Joi.object({
+      name: Joi.string()
+        .min(2)
+        .max(50)
+        .pattern(/^[a-zA-Z0-9\s\-]+$/)
+        .required()
+        .messages({
+          'string.pattern.base': 'Category name can only contain letters, numbers, spaces, and hyphens'
+        }),
+      description: Joi.string().max(200).allow(''),
+      parentId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).allow(''),
+      status: Joi.string().valid('active', 'inactive').default('active')
+    }),
+
+    user: Joi.object({
+      name: Joi.string()
+        .min(2)
+        .max(50)
+        .pattern(/^[a-zA-Z\s]+$/)
+        .required(),
+      email: Joi.string().email().max(100).required(),
+      role: Joi.string().valid('user', 'vendor', 'admin').required(),
+      isActive: Joi.boolean().default(true)
+    })
+  }
+
+  // Data validation
+  validateData(data, schemaName) {
+    const schema = AdminService.validationSchemas[schemaName]
+    if (!schema) {
+      throw new Error(`Validation schema '${schemaName}' not found`)
+    }
+
+    const { error, value } = schema.validate(data, {
+      abortEarly: false,
+      stripUnknown: true
+    })
+
+    if (error) {
+      const validationError = new Error('Validation failed')
+      validationError.name = 'ValidationError'
+      validationError.details = error.details.map(detail => ({
+        field: detail.path.join('.'),
+        message: detail.message,
+        type: detail.type
+      }))
+      throw validationError
+    }
+
+    return value
+  }
+
+  // Data sanitization
+  sanitizeData(data) {
+    if (typeof data === 'string') {
+      return DOMPurify.sanitize(data, { ALLOWED_TAGS: [] })
+    }
+    
+    if (Array.isArray(data)) {
+      return data.map(item => this.sanitizeData(item))
+    }
+    
+    if (data && typeof data === 'object') {
+      const sanitized = {}
+      for (const [key, value] of Object.entries(data)) {
+        // Skip dangerous keys
+        if (key.startsWith('$') || key.includes('.') || key === '__proto__') {
+          continue
+        }
+        sanitized[key] = this.sanitizeData(value)
+      }
+      return sanitized
+    }
+    
+    return data
+  }
+
+  // Token management
+  getToken() {
+    return localStorage.getItem('admin_access_token')
+  }
+
+  getRefreshToken() {
+    return localStorage.getItem('admin_refresh_token')
+  }
+
+  setTokens(accessToken, refreshToken) {
+    localStorage.setItem('admin_access_token', accessToken)
+    if (refreshToken) {
+      localStorage.setItem('admin_refresh_token', refreshToken)
+    }
+  }
+
+  clearTokens() {
+    localStorage.removeItem('admin_access_token')
+    localStorage.removeItem('admin_refresh_token')
+    localStorage.removeItem('csrf_token')
+  }
+
+  getCSRFToken() {
+    return localStorage.getItem('csrf_token')
+  }
+
+  async fetchCSRFToken() {
+    try {
+      const response = await axios.get(`${this.baseURL}/csrf-token`)
+      const csrfToken = response.data.csrfToken
+      localStorage.setItem('csrf_token', csrfToken)
+      return csrfToken
+    } catch (error) {
+      console.warn('Failed to fetch CSRF token:', error.message)
+      return null
+    }
+  }
+
+  // Token refresh
+  async refreshToken() {
+    const refreshToken = this.getRefreshToken()
+    if (!refreshToken) {
+      throw new Error('No refresh token available')
     }
 
     try {
-      const response = await fetch(url, config)
+      const response = await axios.post(`${this.baseURL}/auth/refresh`, {
+        refreshToken
+      })
+
+      const { accessToken, refreshToken: newRefreshToken } = response.data
+      this.setTokens(accessToken, newRefreshToken)
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      return await response.json()
+      return accessToken
     } catch (error) {
-      console.error('API request failed:', error)
+      this.clearTokens()
       throw error
     }
   }
 
-  // Dashboard data
+  // Error handling
+  handleError(error) {
+    if (error.response) {
+      // Server responded with error status
+      const { status, data } = error.response
+      
+      const customError = new Error(data.message || `HTTP Error ${status}`)
+      customError.status = status
+      customError.errors = data.errors || []
+      customError.timestamp = data.timestamp
+      
+      return customError
+    } else if (error.request) {
+      // Network error
+      return new Error('Network error: Unable to connect to server')
+    } else {
+      // Other error
+      return error
+    }
+  }
+
+  handleAuthError() {
+    this.clearTokens()
+    // Redirect to login page
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login'
+    }
+  }
+
+  // API Methods with validation
+  
+  // Dashboard
   async getDashboardData() {
-    return this.request('/admin/dashboard')
+    try {
+      const response = await this.api.get('/admin/dashboard')
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
-  // Analytics data
+  // Analytics
   async getAnalytics(period = '30d') {
-    return this.request(`/admin/analytics?period=${period}`)
-  }
-
-  // Hero banners
-  async getHeroBanners() {
-    return this.request('/admin/hero-banners')
-  }
-
-  async createHeroBanner(data) {
-    return this.request('/admin/hero-banners', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    })
-  }
-
-  async updateHeroBanner(id, data) {
-    return this.request(`/admin/hero-banners/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    })
-  }
-
-  async deleteHeroBanner(id) {
-    return this.request(`/admin/hero-banners/${id}`, {
-      method: 'DELETE'
-    })
-  }
-
-  // Featured collections
-  async getFeaturedCollections() {
-    return this.request('/admin/featured-collections')
-  }
-
-  async createFeaturedCollection(data) {
-    return this.request('/admin/featured-collections', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    })
-  }
-
-  async updateFeaturedCollection(id, data) {
-    return this.request(`/admin/featured-collections/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    })
-  }
-
-  async deleteFeaturedCollection(id) {
-    return this.request(`/admin/featured-collections/${id}`, {
-      method: 'DELETE'
-    })
+    try {
+      const response = await this.api.get(`/admin/analytics`, {
+        params: { period }
+      })
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
   // Products
   async getProducts(filters = {}) {
-    const params = new URLSearchParams(filters).toString()
-    return this.request(`/admin/products${params ? `?${params}` : ''}`)
+    try {
+      const response = await this.api.get('/admin/products', {
+        params: filters
+      })
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
-  async createProduct(data) {
-    return this.request('/admin/products', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    })
+  async getProduct(id) {
+    try {
+      const response = await this.api.get(`/admin/products/${id}`)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
-  async updateProduct(id, data) {
-    return this.request(`/admin/products/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    })
+  async createProduct(productData) {
+    try {
+      // Client-side validation
+      const validatedData = this.validateData(productData, 'product')
+      
+      const response = await this.api.post('/admin/products', validatedData)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  }
+
+  async updateProduct(id, productData) {
+    try {
+      // Client-side validation (partial update)
+      const validatedData = this.validateData(productData, 'product')
+      
+      const response = await this.api.put(`/admin/products/${id}`, validatedData)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
   async deleteProduct(id) {
-    return this.request(`/admin/products/${id}`, {
-      method: 'DELETE'
-    })
+    try {
+      const response = await this.api.delete(`/admin/products/${id}`)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
   // Categories
   async getCategories() {
-    return this.request('/admin/categories')
+    try {
+      const response = await this.api.get('/admin/categories')
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
-  async createCategory(data) {
-    return this.request('/admin/categories', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    })
+  async createCategory(categoryData) {
+    try {
+      const validatedData = this.validateData(categoryData, 'category')
+      const response = await this.api.post('/admin/categories', validatedData)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
-  async updateCategory(id, data) {
-    return this.request(`/admin/categories/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    })
+  async updateCategory(id, categoryData) {
+    try {
+      const validatedData = this.validateData(categoryData, 'category')
+      const response = await this.api.put(`/admin/categories/${id}`, validatedData)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
   async deleteCategory(id) {
-    return this.request(`/admin/categories/${id}`, {
-      method: 'DELETE'
-    })
+    try {
+      const response = await this.api.delete(`/admin/categories/${id}`)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
   // Users
   async getUsers(filters = {}) {
-    const params = new URLSearchParams(filters).toString()
-    return this.request(`/admin/users${params ? `?${params}` : ''}`)
+    try {
+      const response = await this.api.get('/admin/users', {
+        params: filters
+      })
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
-  async updateUser(id, data) {
-    return this.request(`/admin/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    })
+  async updateUser(id, userData) {
+    try {
+      const validatedData = this.validateData(userData, 'user')
+      const response = await this.api.put(`/admin/users/${id}`, validatedData)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
   async deleteUser(id) {
-    return this.request(`/admin/users/${id}`, {
-      method: 'DELETE'
-    })
+    try {
+      const response = await this.api.delete(`/admin/users/${id}`)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
-  // Campaigns
-  async getCampaigns() {
-    return this.request('/admin/campaigns')
-  }
-
-  async createCampaign(data) {
-    return this.request('/admin/campaigns', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    })
-  }
-
-  async updateCampaign(id, data) {
-    return this.request(`/admin/campaigns/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    })
-  }
-
-  async deleteCampaign(id) {
-    return this.request(`/admin/campaigns/${id}`, {
-      method: 'DELETE'
-    })
-  }
-
-  // Payments
-  async getPayments(filters = {}) {
-    const params = new URLSearchParams(filters).toString()
-    return this.request(`/admin/payments${params ? `?${params}` : ''}`)
+  // Orders
+  async getOrders(filters = {}) {
+    try {
+      const response = await this.api.get('/admin/orders', {
+        params: filters
+      })
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 
   // File upload
   async uploadFile(file, folder = 'general') {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('folder', folder)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', folder)
 
-    return this.request('/admin/upload', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        // Don't set Content-Type for FormData, let browser set it
-      }
-    })
+      const response = await this.api.post('/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        timeout: 30000 // 30 seconds for file upload
+      })
+      
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  }
+
+  // Bulk operations
+  async bulkDeleteProducts(productIds) {
+    try {
+      const response = await this.api.delete('/admin/products/bulk', {
+        data: { ids: productIds }
+      })
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  }
+
+  async bulkUpdateProductStatus(productIds, status) {
+    try {
+      const response = await this.api.patch('/admin/products/bulk-status', {
+        ids: productIds,
+        status
+      })
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
   }
 }
 
-export default new AdminService()
+// Create and export singleton instance
+const adminService = new AdminService()
+export default adminService
