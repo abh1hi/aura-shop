@@ -61,5 +61,18 @@ app.use(Toast, toastOptions)
 app.config.globalProperties.$appName = 'Aura Shop Admin'
 app.config.globalProperties.$appVersion = '1.2.0'
 
+// Development helpers
+if (import.meta.env.DEV) {
+  // Enable Vue devtools
+  app.config.devtools = true
+  
+  // Global access to stores for debugging
+  window.app = app
+  
+  console.log('🚀 Aura Shop Admin Panel - Development Mode')
+  console.log('📡 API Base URL:', import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api')
+  console.log('🔧 Vue Devtools:', app.config.devtools ? 'Enabled' : 'Disabled')
+}
+
 // Mount the app
 app.mount('#app')
