@@ -5,6 +5,7 @@ import { useToast } from 'vue-toastification'
 // Import components
 import AdminDashboard from '../pages/AdminDashboard.vue'
 import AdminLogin from '../pages/AdminLogin.vue'
+import AdminRegister from '../pages/AdminRegister.vue'
 
 // Define routes
 const routes = [
@@ -19,6 +20,15 @@ const routes = [
     meta: {
       requiresGuest: true,
       title: 'Admin Login'
+    }
+  },
+  {
+    path: '/register',
+    name: 'AdminRegister',
+    component: AdminRegister,
+    meta: {
+      requiresGuest: true,
+      title: 'Create Account'
     }
   },
   {
@@ -246,7 +256,7 @@ router.beforeEach(async (to, from, next) => {
       }
     }
     
-    // Redirect authenticated users away from login page
+    // Redirect authenticated users away from login/register page
     if (to.meta.requiresGuest && authStore.isLoggedIn) {
       return next('/dashboard')
     }
