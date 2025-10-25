@@ -4,7 +4,7 @@
   login of administrators by hitting a separate, dedicated admin login endpoint.
   I have updated the API_URL to point to your local backend server.
 */
-const API_URL = 'http://localhost:5000/api/auth/admin/';
+const API_URL = 'https://weary-spooky-cape-r47p7p6ggvvv3xxrq-5000.app.github.dev/api/auth/admin/';
 
 /**
  * Logs in an administrator.
